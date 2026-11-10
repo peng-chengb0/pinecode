@@ -692,38 +692,221 @@ body::after {
 @media (min-width: 1280px) {
   #workspace { grid-template-columns: minmax(0, 1fr) 410px; }
 }
+
+/* ── PineCode v2: sidebar + inline trace dock ── */
+#app {
+  flex-direction: row;
+  align-items: stretch;
+  max-width: 1780px;
+  gap: 12px;
+}
+#sidebar {
+  width: 268px;
+  flex: 0 0 268px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px 12px 11px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 14px 40px rgba(30, 64, 120, .06);
+  overflow: hidden;
+}
+.side-brand { display: flex; align-items: center; gap: 10px; padding: 1px 2px 7px; }
+.logo-mark {
+  width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center;
+  border-radius: 11px; color: #fff;
+  background: linear-gradient(135deg, #0f766e 0%, #16a34a 55%, #22d3ee 120%);
+  box-shadow: 0 0 22px rgba(15, 118, 110, .22);
+}
+.logo-mark svg { width: 24px; height: 24px; display: block; }
+.side-brand-name { font-size: 17px; font-weight: 700; color: #0f172a; letter-spacing: -.01em; }
+.side-brand-sub { font-size: 9px; letter-spacing: .16em; color: #7b89a3; margin-top: 2px; }
+.new-chat-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid rgba(15, 118, 110, .25); border-radius: 8px;
+  background: #0f766e; color: #fff; font: inherit; font-size: 12px; font-weight: 600;
+  padding: 7px 8px; cursor: pointer; transition: .15s ease;
+}
+.new-chat-btn:hover { background: #0d9488; transform: translateY(-1px); }
+.new-chat-btn span { font-size: 14px; line-height: 1; opacity: .9; }
+.side-section { min-width: 0; }
+.workspace-section { flex: 1; min-height: 110px; display: flex; flex-direction: column; }
+.side-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  color: #64748b; font-size: 10px; letter-spacing: .12em; margin-bottom: 6px;
+}
+.side-hint { color: #94a3b8; font-size: 9px; letter-spacing: 0; }
+.icon-btn {
+  width: 23px; height: 23px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 6px; background: #fff;
+  color: #64748b; font: inherit; font-size: 12px; cursor: pointer;
+}
+.icon-btn:hover { background: #f1f5f9; color: #0f766e; }
+.file-tree {
+  flex: 1; min-height: 80px; overflow: auto;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: #fbfcfe; padding: 4px;
+}
+.tree-empty { padding: 10px 6px; color: #94a3b8; font-size: 11px; line-height: 1.5; }
+.tree-item {
+  width: 100%; display: flex; align-items: center; gap: 5px;
+  padding: 4px 6px; border: 0; border-radius: 5px; background: transparent;
+  cursor: pointer; text-align: left; color: #475569; font: inherit; font-size: 11px;
+}
+.tree-item:hover { background: #eef2ff; }
+.tree-item.dir { color: #334155; font-weight: 600; cursor: default; }
+.tree-item.dir:hover { background: transparent; }
+.tree-icon { width: 13px; flex: 0 0 13px; color: #64748b; text-align: center; font-size: 9px; }
+.tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-section { flex: 0 0 auto; }
+.drop-zone {
+  border: 1px dashed #cbd5e1; border-radius: 8px; padding: 9px 7px;
+  text-align: center; cursor: pointer; background: #fbfcfe;
+  color: #64748b; font-size: 11px; line-height: 1.5; transition: .15s ease;
+}
+.drop-zone:hover, .drop-zone.dragging { border-color: #0f766e; background: #f0fdfa; }
+.drop-icon { font-size: 15px; color: #0f766e; line-height: 1.2; }
+.drop-sub { font-size: 9px; color: #94a3b8; }
+.upload-status { min-height: 13px; margin-top: 4px; font-size: 10px; color: #64748b; overflow-wrap: anywhere; }
+.side-footer {
+  flex: 0 0 auto; border-top: 1px solid var(--line); padding-top: 7px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.side-footer-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 9px; color: #94a3b8; }
+.side-footer-row span { width: 46px; flex: 0 0 46px; letter-spacing: .1em; }
+.side-footer-row b { min-width: 0; font-weight: 500; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#workspace { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+#chat-panel { flex: 1; min-height: 0; }
+.topbar-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.topbar-kicker { font-size: 9px; letter-spacing: .16em; color: #0f766e; white-space: nowrap; }
+.topbar-sub { font-size: 12px; color: #334155; white-space: nowrap; }
+.top-meta .model-badge { margin-right: 2px; }
+
+.run-trace {
+  flex-shrink: 0; border-top: 1px solid var(--line);
+  background: rgba(248, 250, 252, .88);
+}
+.run-trace[hidden] { display: none; }
+.run-trace-head {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 8px 17px; border: 0; background: transparent;
+  color: #334155; font: inherit; text-align: left; cursor: pointer;
+}
+.run-trace-head:hover { background: #f1f5f9; }
+.trace-chevron { color: #64748b; font-size: 13px; line-height: 1; transition: transform .2s ease; }
+.run-trace.open .trace-chevron { transform: rotate(180deg); }
+.trace-heading { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.run-label { font-size: 8px; letter-spacing: .08em; color: #94a3b8; white-space: nowrap; }
+.run-summary { margin-left: auto; font-size: 9px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.run-trace-body { display: none; padding: 0 17px 10px; }
+.run-trace.open .run-trace-body { display: block; }
+.run-trace .stage-bar { padding: 2px 0 8px; }
+.run-trace .process-list { max-height: 150px; padding: 0; overflow-y: auto; }
+.run-trace .process-empty { padding: 9px 9px; }
+.run-trace .panel-stats { padding: 7px 0 0; background: transparent; }
+
+.modal[hidden] { display: none; }
+.modal {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+  padding: 24px; background: rgba(15, 23, 42, .32); backdrop-filter: blur(4px);
+}
+.modal-card {
+  width: min(920px, 94vw); max-height: 82vh; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, .22); overflow: hidden;
+}
+.modal-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 13px 15px; border-bottom: 1px solid var(--line);
+}
+.modal-kicker { font-size: 8px; letter-spacing: .16em; color: #0f766e; }
+.modal-title { margin-top: 3px; font-size: 12px; font-weight: 600; color: #0f172a; overflow-wrap: anywhere; }
+.modal-body { overflow: auto; padding: 14px 16px; background: #f8fafc; }
+.modal-body pre {
+  margin: 0; color: #334155; white-space: pre-wrap; word-break: break-word;
+  font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace; font-size: 11px; line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  #sidebar { width: 232px; flex-basis: 232px; }
+}
+@media (max-width: 840px) {
+  #app { padding: 8px; }
+  #sidebar { display: none; }
+  .run-summary { display: none; }
+}
 </style>
 </head>
 <body>
 <div id="app">
-  <header id="topbar">
-    <div class="brand-wrap">
-      <div class="brand-mark">⚡</div>
-      <div class="brand-copy">
-        <div class="brand-line">
-          <span class="brand">PineCode</span>
-          <span class="brand-chip">REMOTE</span>
-          <span class="model-badge" id="model-badge">deepseek-flash</span>
-        </div>
-        <div class="brand-sub">Java coding agent · live execution trace</div>
+  <aside id="sidebar">
+    <div class="side-brand">
+      <div class="logo-mark" aria-label="PineCode logo">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 1.8 4.2 11h3.7l-2 4.1h3.2V22h5.8v-6.9h3.2l-2-4.1h3.7L12 1.8z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="side-brand-copy">
+        <div class="side-brand-name">PineCode</div>
+        <div class="side-brand-sub">CODING AGENT</div>
       </div>
     </div>
-    <div class="top-meta">
-      <div class="run-state" id="run-state" data-state="idle"><span class="state-dot"></span><span id="run-state-text">IDLE</span></div>
-      <div class="meta-pill" id="elapsed">0.0s</div>
-      <div class="meta-pill conn" id="conn-status"><span class="dot disconnected"></span>Connecting</div>
+
+    <button id="new-chat-btn" class="new-chat-btn" type="button"><span>+</span> 新对话</button>
+
+    <div class="side-section workspace-section">
+      <div class="side-head">
+        <span>工作区</span>
+        <button id="refresh-tree" class="icon-btn" type="button" title="刷新工作区">↻</button>
+      </div>
+      <div id="file-tree" class="file-tree">
+        <div class="tree-empty">正在读取工作区…</div>
+      </div>
     </div>
-  </header>
 
-  <div id="session-strip">
-    <span class="session-label">SESSION</span><span class="session-value" id="session-id">--</span>
-    <span class="strip-divider"></span>
-    <span class="session-label">CWD</span><span class="session-value" id="cwd" title="">--</span>
-    <span class="strip-spacer"></span>
-    <span class="token-info" id="token-info"><span>IN</span> 0 <i>/</i> <span>OUT</span> 0</span>
-  </div>
+    <div class="side-section upload-section">
+      <div class="side-head"><span>文档</span><span class="side-hint">≤ 8 MB</span></div>
+      <div id="drop-zone" class="drop-zone">
+        <div class="drop-icon">⇪</div>
+        <div>拖拽文件到这里</div>
+        <div class="drop-sub">或点击选择文件</div>
+      </div>
+      <input id="file-input" type="file" multiple hidden>
+      <div id="upload-status" class="upload-status"></div>
+    </div>
 
-  <main id="workspace">
+    <div class="side-footer">
+      <div class="side-footer-row"><span>SESSION</span><b id="session-id">--</b></div>
+      <div class="side-footer-row"><span>CWD</span><b id="cwd" title="">--</b></div>
+    </div>
+  </aside>
+
+  <div id="workspace">
+    <header id="topbar">
+      <div class="topbar-title">
+        <span class="topbar-kicker">PINECODE / AGENT</span>
+        <span class="topbar-sub">仓库级编程智能体</span>
+      </div>
+      <div class="top-meta">
+        <span class="model-badge" id="model-badge">deepseek-flash</span>
+        <div class="run-state" id="run-state" data-state="idle"><span class="state-dot"></span><span id="run-state-text">IDLE</span></div>
+        <div class="meta-pill" id="elapsed">0.0s</div>
+        <div class="meta-pill conn" id="conn-status"><span class="dot disconnected"></span>Connecting</div>
+      </div>
+    </header>
+
+    <div id="session-strip">
+      <span class="session-label">MODE</span><span class="session-value">REMOTE / WEBSOCKET</span>
+      <span class="strip-divider"></span>
+      <span class="session-label">ENGINE</span><span class="session-value">ReAct Agent Loop</span>
+      <span class="strip-spacer"></span>
+      <span class="token-info" id="token-info"><span>IN</span> 0 <i>/</i> <span>OUT</span> 0</span>
+    </div>
+
     <section id="chat-panel">
       <div id="messages">
         <div id="welcome" class="welcome">
@@ -733,7 +916,7 @@ body::after {
             <span class="kicker-note">JAVA 21 · REACT LOOP</span>
           </div>
           <h1>把一句需求，变成一次<br><em>可观察的编码过程</em></h1>
-          <p class="welcome-desc">PineCode 会在真实仓库中检索、编辑、执行与验证。右侧轨迹会同步展示它的思考、工具调用和观察结果，而不是只给出一段黑盒回答。</p>
+          <p class="welcome-desc">PineCode 会在真实仓库中检索、编辑、执行与验证。下方轨迹会同步展示它的思考、工具调用和观察结果，而不是只给出一段黑盒回答。</p>
           <div class="prompt-grid">
             <button class="prompt-card" onclick="usePrompt('先介绍一下这个项目的整体架构，以及各个模块的职责')">
               <span class="prompt-icon">⌘</span>
@@ -765,6 +948,32 @@ body::after {
         </div>
       </div>
 
+      <div id="run-trace" class="run-trace" hidden>
+        <button class="run-trace-head" type="button" onclick="toggleRunTrace()">
+          <span class="trace-chevron">⌄</span>
+          <span class="trace-heading">运行轨迹</span>
+          <span class="run-label" id="run-label">RUN 00</span>
+          <span class="run-summary" id="run-summary">等待任务</span>
+          <span class="live-badge" id="live-badge"><i></i><span id="live-text">IDLE</span></span>
+        </button>
+        <div id="run-trace-body" class="run-trace-body">
+          <div class="stage-bar" id="stage-bar">
+            <div class="stage" data-stage="think"><b>01</b><span>思考</span></div>
+            <div class="stage" data-stage="tool"><b>02</b><span>行动</span></div>
+            <div class="stage" data-stage="observe"><b>03</b><span>观察</span></div>
+            <div class="stage" data-stage="answer"><b>04</b><span>回答</span></div>
+          </div>
+          <div id="process-list" class="process-list">
+            <div class="process-empty"><span class="empty-glyph">⌁</span><p>任务开始后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>
+          </div>
+          <div class="panel-stats">
+            <span>STEPS <b id="step-count">0</b></span>
+            <span>TOOLS <b id="tool-count">0</b></span>
+            <span>ELAPSED <b id="panel-elapsed">0.0s</b></span>
+          </div>
+        </div>
+      </div>
+
       <div id="composer-wrap">
         <div id="slash-menu"></div>
         <div id="composer">
@@ -778,37 +987,20 @@ body::after {
         </div>
       </div>
     </section>
+  </div>
+</div>
 
-    <aside id="process-panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-kicker">LIVE TRACE</div>
-          <div class="panel-title-row"><h2>运行轨迹</h2><span class="run-label" id="run-label">RUN 00</span></div>
-        </div>
-        <span class="live-badge" id="live-badge"><i></i><span id="live-text">LIVE</span></span>
+<div id="file-modal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <div class="modal-kicker">WORKSPACE FILE</div>
+        <div id="file-modal-title" class="modal-title">--</div>
       </div>
-      <div class="stage-bar" id="stage-bar">
-        <div class="stage" data-stage="think"><b>01</b><span>思考</span></div>
-        <div class="stage" data-stage="tool"><b>02</b><span>行动</span></div>
-        <div class="stage" data-stage="observe"><b>03</b><span>观察</span></div>
-        <div class="stage" data-stage="answer"><b>04</b><span>回答</span></div>
-      </div>
-      <div id="process-list" class="process-list">
-        <div class="process-empty"><span class="empty-glyph">⌁</span><p>发送一条消息后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>
-      </div>
-      <div class="panel-stats">
-        <span>STEPS <b id="step-count">0</b></span>
-        <span>TOOLS <b id="tool-count">0</b></span>
-        <span>ELAPSED <b id="panel-elapsed">0.0s</b></span>
-      </div>
-      <div class="panel-foot">
-        <div class="capability-label">RUNTIME</div>
-        <div class="capability-tags">
-          <span>Java 21</span><span>JLine 3</span><span>MCP</span><span>JUnit 5</span>
-        </div>
-      </div>
-    </aside>
-  </main>
+      <button id="file-modal-close" class="icon-btn" type="button" title="关闭">×</button>
+    </div>
+    <div class="modal-body"><pre id="file-modal-content"></pre></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -833,6 +1025,18 @@ const stepCountEl = document.getElementById('step-count');
 const toolCountEl = document.getElementById('tool-count');
 const stageEls = Array.from(document.querySelectorAll('.stage'));
 const welcomeHTML = document.getElementById('welcome').outerHTML;
+const runTrace = document.getElementById('run-trace');
+const runSummary = document.getElementById('run-summary');
+const fileTree = document.getElementById('file-tree');
+const refreshTreeBtn = document.getElementById('refresh-tree');
+const newChatBtn = document.getElementById('new-chat-btn');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const uploadStatus = document.getElementById('upload-status');
+const fileModal = document.getElementById('file-modal');
+const fileModalTitle = document.getElementById('file-modal-title');
+const fileModalContent = document.getElementById('file-modal-content');
+const fileModalClose = document.getElementById('file-modal-close');
 
 let ws = null;
 let streaming = false;
@@ -957,6 +1161,9 @@ function startRun(prompt) {
   activeTools = 0;
   processList.innerHTML = '';
   updateStats();
+  runTrace.hidden = false;
+  runTrace.classList.add('open');
+  runSummary.textContent = '执行中…';
   addTrace('start', '接收任务', clip(prompt, 110));
   setRunState('running', 'THINKING');
   setStage('think');
@@ -980,9 +1187,18 @@ function stopRun(state, elapsedSeconds) {
     : (runStart ? (Date.now() - runStart) / 1000 : 0);
   elapsedEl.textContent = elapsed.toFixed(1) + 's';
   panelElapsedEl.textContent = elapsed.toFixed(1) + 's';
+  runSummary.textContent = stepCount + ' 步 · ' + toolCount + ' 工具 · ' + elapsed.toFixed(1) + 's';
   setRunState(state, state === 'done' ? 'DONE' : state === 'error' ? 'ERROR' : 'IDLE');
   liveBadge.classList.remove('on');
   liveText.textContent = state === 'done' ? 'IDLE' : state === 'error' ? 'IDLE' : 'LIVE';
+  setTimeout(() => {
+    if (!streaming) runTrace.classList.remove('open');
+  }, 900);
+}
+
+function toggleRunTrace() {
+  if (runTrace.hidden) return;
+  runTrace.classList.toggle('open');
 }
 
 function setStage(name) {
@@ -1056,6 +1272,7 @@ function handleMessage(msg) {
       const cwd = msg.data.cwd || '--';
       cwdEl.textContent = cwd;
       cwdEl.title = cwd;
+      loadWorkspace();
       break;
     }
 
@@ -1069,12 +1286,15 @@ function handleMessage(msg) {
 
     case 'clear':
       messagesEl.innerHTML = welcomeHTML;
-      processList.innerHTML = '<div class="process-empty"><span class="empty-glyph">⌁</span><p>发送一条消息后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>';
+      processList.innerHTML = '<div class="process-empty"><span class="empty-glyph">⌁</span><p>任务开始后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>';
       stepCount = 0; toolCount = 0; updateStats();
       resetStages();
       setRunState('idle', 'IDLE');
       liveBadge.classList.remove('on');
       liveText.textContent = 'IDLE';
+      runTrace.hidden = true;
+      runTrace.classList.remove('open');
+      runSummary.textContent = '等待任务';
       if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
       elapsedEl.textContent = '0.0s';
       panelElapsedEl.textContent = '0.0s';
@@ -1200,6 +1420,7 @@ function handleMessage(msg) {
       stopRun('done', msg.data.elapsed);
       streaming = false;
       updateUI();
+      loadWorkspace();
       {
         const el = document.createElement('div');
         el.className = 'done-indicator';
@@ -1641,6 +1862,136 @@ inputEl.addEventListener('input', () => {
 
 sendBtn.addEventListener('click', sendMessage);
 
+// ── workspace / uploads ──
+function fileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (['java', 'kt', 'js', 'ts', 'py', 'go', 'rs'].includes(ext)) return '▤';
+  if (['md', 'txt', 'log', 'csv'].includes(ext)) return '≡';
+  if (['json', 'yaml', 'yml', 'xml', 'toml'].includes(ext)) return '{}';
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext)) return '▧';
+  return '·';
+}
+
+async function loadWorkspace() {
+  if (!fileTree) return;
+  try {
+    const res = await fetch('/api/workspace/tree', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    renderWorkspace(data.items || []);
+  } catch (e) {
+    fileTree.innerHTML = '<div class="tree-empty">无法读取工作区<br>请确认服务已启动</div>';
+  }
+}
+
+function renderWorkspace(items) {
+  if (!items.length) {
+    fileTree.innerHTML = '<div class="tree-empty">工作区为空</div>';
+    return;
+  }
+  fileTree.innerHTML = items.map((item) => {
+    const depth = (item.path.match(/\//g) || []).length;
+    const isDir = item.type === 'dir';
+    const icon = isDir ? '▾' : fileIcon(item.name);
+    return '<button class="tree-item ' + (isDir ? 'dir' : 'file') + '"' +
+      ' data-path="' + escapeHtml(item.path) + '"' +
+      ' data-type="' + (isDir ? 'dir' : 'file') + '"' +
+      ' style="padding-left:' + (6 + depth * 12) + 'px"' +
+      ' title="' + escapeHtml(item.path) + '">' +
+      '<span class="tree-icon">' + icon + '</span>' +
+      '<span class="tree-name">' + escapeHtml(item.name) + '</span>' +
+      '</button>';
+  }).join('');
+}
+
+async function openFile(path) {
+  try {
+    const res = await fetch('/api/workspace/file?path=' + encodeURIComponent(path), { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    fileModalTitle.textContent = path;
+    fileModalContent.textContent = data.content || '';
+    fileModal.hidden = false;
+  } catch (e) {
+    fileModalTitle.textContent = path;
+    fileModalContent.textContent = '无法预览：' + e.message;
+    fileModal.hidden = false;
+  }
+}
+
+function closeFileModal() {
+  fileModal.hidden = true;
+}
+
+fileTree.addEventListener('click', (e) => {
+  const item = e.target.closest('.tree-item');
+  if (!item) return;
+  if (item.dataset.type === 'file') openFile(item.dataset.path);
+});
+
+refreshTreeBtn.addEventListener('click', loadWorkspace);
+fileModalClose.addEventListener('click', closeFileModal);
+fileModal.addEventListener('click', (e) => {
+  if (e.target === fileModal) closeFileModal();
+});
+
+async function uploadFiles(files) {
+  if (!files || !files.length) return;
+  uploadStatus.textContent = '上传中…';
+  let saved = 0;
+  try {
+    for (const file of files) {
+      const res = await fetch('/api/upload?name=' + encodeURIComponent(file.name), {
+        method: 'POST',
+        body: file
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      saved += 1;
+    }
+    uploadStatus.textContent = '已上传 ' + saved + ' 个文件';
+    loadWorkspace();
+  } catch (e) {
+    uploadStatus.textContent = '上传失败：' + e.message;
+  }
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  uploadFiles(Array.from(fileInput.files || []));
+  fileInput.value = '';
+});
+['dragenter', 'dragover'].forEach((name) => {
+  dropZone.addEventListener(name, (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragging');
+  });
+});
+['dragleave', 'drop'].forEach((name) => {
+  dropZone.addEventListener(name, (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragging');
+  });
+});
+dropZone.addEventListener('drop', (e) => {
+  uploadFiles(Array.from(e.dataTransfer.files || []));
+});
+
+newChatBtn.addEventListener('click', () => {
+  if (streaming) {
+    addError('请等待当前任务结束后再新建对话。');
+    return;
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'user_message', data: { content: '/clear' } }));
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !fileModal.hidden) closeFileModal();
+});
+
+loadWorkspace();
 connect();
 inputEl.focus();
 </script>

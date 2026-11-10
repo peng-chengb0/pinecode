@@ -6,6 +6,7 @@ build/
 *.iml
 out/
 .mewcode/
+uploads/
 CLAUDE.md
 
 # Local secrets / runtime state
@@ -26,7 +27,3 @@ make_architecture.py
 # OS files
 .DS_Store
 Thumbs.db
-
-# Local academic deliverables
-开题报告_*.md
-

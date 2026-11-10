@@ -24,17 +24,45 @@ PineCode 是一个面向真实代码仓库的终端编程智能体。它不仅�
 
 ![PineCode live run](assets/screenshot-live.png)
 
-一次真实运行中，PineCode 先调用 `ReadFile` 读取 `build.gradle.kts`，再根据文件内容总结技术栈。右侧 `LIVE TRACE` 同步显示步骤、工具调用、耗时和 Token 使用情况。
+一次真实运行中，PineCode 先调用 `ReadFile` 读取 `build.gradle.kts`，再根据文件内容总结技术栈。对话下方的 `运行轨迹` 会同步显示步骤、工具调用、耗时和 Token 使用情况；任务结束后自动折叠成一行摘要。
+
+### 运行轨迹（展开）
+
+![PineCode trace](assets/screenshot-trace.png)
+
+运行时可以展开查看“思考 → 行动 → 观察 → 回答”的阶段、每一步的工具调用和观察结果，也可以随时折叠。
 
 ### 初始界面
 
 ![PineCode home](assets/screenshot-home.png)
 
+左侧是工作区与文档上传区，中间是对话区，底部是可折叠的运行轨迹。
+
+### 工作区与文档
+
+- 左侧文件树读取当前工作目录，忽略 `.git`、`build`、`.mewcode`、`node_modules` 等目录；
+- 点击文本文件可以在弹窗中预览内容；
+- 支持拖拽或点击上传文件，保存到工作区的 `uploads/` 目录；
+- 单文件最大 8 MB，上传后 Agent 可以直接在工作区里读取；
+- 该接口只适合本机/可信环境，不建议直接暴露到公网。
+
+对应接口：
+
+```text
+GET  /api/workspace/tree
+GET  /api/workspace/file?path=README.md
+POST /api/upload?name=notes.md
+```
+
+文件预览效果：
+
+![PineCode workspace file preview](assets/screenshot-file.png)
+
 ---
 
 ## 为什么是 PineCode？
 
-- **过程可见**：右侧运行轨迹展示思考、工具调用、观察结果和耗时，而不是只给一段黑盒回答。
+- **过程可见**：对话下方的可折叠轨迹展示思考、工具调用、观察结果和耗时，而不是只给一段黑盒回答。
 - **真的会动手**：内置 `ReadFile`、`WriteFile`、`EditFile`、`Bash`、`Glob`、`Grep` 六个核心工具，能直接操作仓库。
 - **改完会验证**：可以运行构建和测试，把“代码改对了吗”交给命令结果验证。
 - **可扩展**：支持 MCP 外部工具、Skill 技能包、Hook 生命周期和 Slash Command。
@@ -62,6 +90,9 @@ PineCode 是一个面向真实代码仓库的终端编程智能体。它不仅�
 | Agent Teams | 🧪 | 多 Agent 团队协作原型，仍在完善 |
 | TUI 终端界面 | ✅ | JLine 3 + Mordant |
 | Remote Web UI | ✅ | Javalin + WebSocket + 原生 HTML/CSS/JS |
+| 工作区浏览 | ✅ | 左侧文件树，点击文本文件可预览 |
+| 文档上传 | ✅ | 拖拽/选择文件，保存到 `uploads/`，单文件 ≤ 8 MB |
+| 可折叠运行轨迹 | ✅ | 对话下方轨迹，运行中展开，结束后自动折叠 |
 | 单元测试 | ✅ | JUnit 5 |
 
 ---
@@ -323,7 +354,7 @@ MCP Server 是外部进程，启动失败不会阻止主程序运行，但对应
 
 输入 `/` 可以查看 Slash Command 菜单。
 
-Remote UI 右侧会同步展示：
+对话下方的运行轨迹会同步展示：
 
 - 思考过程
 - 工具名和参数
@@ -344,7 +375,9 @@ pinecode/
 ├── assets/
 │   ├── architecture.png
 │   ├── screenshot-home.png
-│   └── screenshot-live.png
+│   ├── screenshot-live.png
+│   ├── screenshot-trace.png
+│   └── screenshot-file.png
 └── src/
     ├── main/java/com/mewcode/
     │   ├── agent/          # Agent Loop、事件流、流式工具执行
@@ -420,6 +453,9 @@ README 不会预先填写未实测的指标；实验结果会在后续版本和�
 
 ## Roadmap
 
+- [x] 左侧工作区文件树与文本预览
+- [x] 文档上传（`uploads/`，单文件 ≤ 8 MB）
+- [x] 可折叠运行轨迹（对话下方，结束后自动折叠）
 - [ ] 一键演示剧本与环境重置
 - [ ] Diff / 测试结果可视化面板
 - [ ] 事件流录制与回放（答辩离线兜底）

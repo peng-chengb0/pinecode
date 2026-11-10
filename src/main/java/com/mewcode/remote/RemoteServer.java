@@ -41,8 +41,10 @@ import com.mewcode.tui.dialog.AskUserDialog;
 import com.mewcode.worktree.WorktreeManager;
 
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import io.javalin.websocket.WsContext;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -57,6 +59,14 @@ import java.util.concurrent.locks.ReentrantLock;
 public class RemoteServer {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private static final int MAX_TREE_ENTRIES = 500;
+    private static final long MAX_PREVIEW_BYTES = 512 * 1024;
+    private static final long MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+    private static final Set<String> WORKSPACE_IGNORED = Set.of(
+            ".git", ".idea", ".gradle", "build", "out", "target", "node_modules",
+            ".mewcode"
+    );
 
     // ── 配置 ──────────────────────────────────────────────────────────
     private final List<ProviderConfig> providers;
@@ -114,6 +124,12 @@ public class RemoteServer {
         this.enableCoordinatorMode = enableCoordinatorMode;
     }
 
+    /** Backward-compatible constructor for older launch code. */
+    public RemoteServer(List<ProviderConfig> providers, List<McpServerConfig> mcpConfigs,
+                        List<HookConfig> hookConfigs, String addr) {
+        this(providers, mcpConfigs, hookConfigs, addr, false);
+    }
+
     /**
      * 启动 HTTP + WebSocket 服务器。
      * 初始化 Agent 后监听指定地址，阻塞直到服务器关闭。
@@ -132,6 +148,9 @@ public class RemoteServer {
                     ctx.contentType("text/html; charset=utf-8");
                     ctx.result(WebContent.INDEX_HTML);
                 })
+                .get("/api/workspace/tree", this::handleWorkspaceTree)
+                .get("/api/workspace/file", this::handleWorkspaceFile)
+                .post("/api/upload", this::handleUpload)
                 .ws("/ws", ws -> {
                     ws.onConnect(ctx -> {
                         connections.add(ctx);
@@ -158,6 +177,174 @@ public class RemoteServer {
 
         // 阻塞主线程，让服务器持续运行
         Thread.currentThread().join();
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Workspace / upload API
+    // ────────────────────────────────────────────────────────────────────
+
+    private Path workspaceRoot() {
+        return Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
+    }
+
+    private boolean isIgnoredRelative(Path root, Path path) {
+        Path rel = root.relativize(path);
+        for (Path part : rel) {
+            String name = part.toString();
+            if (WORKSPACE_IGNORED.contains(name)) return true;
+            if (name.startsWith(".chrome-") || name.startsWith(".dsh-office-")) return true;
+        }
+        return false;
+    }
+
+    private void handleWorkspaceTree(Context ctx) {
+        try {
+            Path root = workspaceRoot();
+            var allItems = new ArrayList<Map<String, Object>>();
+            try (var paths = Files.walk(root, 8)) {
+                paths.filter(p -> !p.equals(root))
+                        .filter(p -> !isIgnoredRelative(root, p))
+                        .limit(MAX_TREE_ENTRIES * 2L)
+                        .forEach(p -> {
+                            try {
+                                Path rel = root.relativize(p);
+                                boolean dir = Files.isDirectory(p);
+                                var item = new LinkedHashMap<String, Object>();
+                                item.put("name", p.getFileName().toString());
+                                item.put("path", rel.toString().replace('\\', '/'));
+                                item.put("type", dir ? "dir" : "file");
+                                if (!dir) item.put("size", Files.size(p));
+                                allItems.add(item);
+                            } catch (Exception ignored) {
+                            }
+                        });
+            }
+            allItems.sort(Comparator.comparing(
+                    m -> String.valueOf(m.get("path")).toLowerCase(Locale.ROOT)));
+            var items = allItems.size() > MAX_TREE_ENTRIES
+                    ? new ArrayList<>(allItems.subList(0, MAX_TREE_ENTRIES))
+                    : allItems;
+            ctx.json(Map.of("root", root.toString(), "items", items));
+        } catch (Exception e) {
+            ctx.status(500).json(Map.of("error", "Failed to read workspace: " + e.getMessage()));
+        }
+    }
+
+    private void handleWorkspaceFile(Context ctx) {
+        String raw = ctx.queryParam("path");
+        if (raw == null || raw.isBlank()) {
+            ctx.status(400).json(Map.of("error", "path is required"));
+            return;
+        }
+        try {
+            Path root = workspaceRoot();
+            Path target = root.resolve(raw.replace('\\', '/')).normalize();
+            if (!target.startsWith(root) || target.equals(root)) {
+                ctx.status(400).json(Map.of("error", "path is outside the workspace"));
+                return;
+            }
+            if (isIgnoredRelative(root, target)) {
+                ctx.status(403).json(Map.of("error", "path is not exposed"));
+                return;
+            }
+            if (!Files.isRegularFile(target)) {
+                ctx.status(404).json(Map.of("error", "file not found"));
+                return;
+            }
+            long size = Files.size(target);
+            if (size > MAX_PREVIEW_BYTES) {
+                ctx.status(413).json(Map.of("error", "file is too large to preview"));
+                return;
+            }
+            byte[] bytes = Files.readAllBytes(target);
+            if (looksBinary(bytes)) {
+                ctx.status(415).json(Map.of("error", "binary file preview is not supported"));
+                return;
+            }
+            ctx.json(Map.of(
+                    "path", root.relativize(target).toString().replace('\\', '/'),
+                    "size", size,
+                    "content", new String(bytes, StandardCharsets.UTF_8)
+            ));
+        } catch (Exception e) {
+            ctx.status(500).json(Map.of("error", "Failed to read file: " + e.getMessage()));
+        }
+    }
+
+    private void handleUpload(Context ctx) {
+        String rawName = ctx.queryParam("name");
+        if (rawName == null || rawName.isBlank()) {
+            ctx.status(400).json(Map.of("error", "name is required"));
+            return;
+        }
+        byte[] data = ctx.bodyAsBytes();
+        if (data.length == 0) {
+            ctx.status(400).json(Map.of("error", "empty upload"));
+            return;
+        }
+        if (data.length > MAX_UPLOAD_BYTES) {
+            ctx.status(413).json(Map.of("error", "upload exceeds 8 MB limit"));
+            return;
+        }
+        try {
+            Path root = workspaceRoot();
+            Path uploads = root.resolve("uploads");
+            Files.createDirectories(uploads);
+            Path target = uniqueFile(uploads, sanitizeFileName(rawName));
+            Files.write(target, data);
+            ctx.json(Map.of(
+                    "name", target.getFileName().toString(),
+                    "path", root.relativize(target).toString().replace('\\', '/'),
+                    "size", data.length
+            ));
+        } catch (Exception e) {
+            ctx.status(500).json(Map.of("error", "Failed to save upload: " + e.getMessage()));
+        }
+    }
+
+    private String sanitizeFileName(String raw) {
+        String name = raw.replace('\\', '/');
+        int slash = name.lastIndexOf('/');
+        if (slash >= 0) name = name.substring(slash + 1);
+        name = name.replaceAll("[^\\p{L}\\p{N}._-]+", "_");
+        if (name.isBlank() || ".".equals(name) || "..".equals(name)) name = "upload.bin";
+
+        String ext = "";
+        int dot = name.lastIndexOf('.');
+        if (dot > 0 && name.length() - dot <= 12) {
+            ext = name.substring(dot);
+            name = name.substring(0, dot);
+        }
+        if (name.length() > 100) name = name.substring(0, 100);
+        return name + ext;
+    }
+
+    private Path uniqueFile(Path dir, String name) {
+        Path candidate = dir.resolve(name);
+        if (!Files.exists(candidate)) return candidate;
+
+        String ext = "";
+        String stem = name;
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) {
+            stem = name.substring(0, dot);
+            ext = name.substring(dot);
+        }
+        for (int i = 1; i < 1000; i++) {
+            candidate = dir.resolve(stem + "-" + i + ext);
+            if (!Files.exists(candidate)) return candidate;
+        }
+        return dir.resolve(System.currentTimeMillis() + "-" + name);
+    }
+
+    private boolean looksBinary(byte[] bytes) {
+        int control = 0;
+        for (byte b : bytes) {
+            int c = b & 0xff;
+            if (c == 0) return true;
+            if (c < 9 || (c > 13 && c < 32)) control++;
+        }
+        return control > Math.max(8, bytes.length / 20);
     }
 
     // ────────────────────────────────────────────────────────────────────
