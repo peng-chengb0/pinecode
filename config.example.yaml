@@ -1,0 +1,40 @@
+# PineCode configuration example
+#
+# Copy this file to .mewcode/config.yaml and fill in your provider.
+# .mewcode/ is intentionally ignored by git; never commit real API keys.
+
+providers:
+  # OpenAI-compatible Chat Completions endpoint.
+  # Works with DeepSeek, Ollama, vLLM, LM Studio, etc.
+  - name: my-provider
+    protocol: openai-compat
+    base_url: https://api.example.com/v1
+    api_key: "YOUR_API_KEY"
+    model: your-model
+    thinking: false
+    max_output_tokens: 8192
+
+  # Anthropic Messages API example:
+  # - name: anthropic
+  #   protocol: anthropic
+  #   base_url: https://api.anthropic.com
+  #   api_key: "YOUR_ANTHROPIC_KEY"
+  #   model: claude-sonnet-4-20250514
+  #   thinking: true
+
+  # OpenAI Responses API example:
+  # - name: openai
+  #   protocol: openai
+  #   base_url: https://api.openai.com/v1
+  #   api_key: "YOUR_OPENAI_KEY"
+  #   model: gpt-4.1
+  #   thinking: false
+
+permission_mode: default
+
+# Optional MCP servers. Requires Node.js/npx for this example.
+mcp_servers: []
+# mcp_servers:
+#   - name: context7
+#     command: npx
+#     args: ["-y", "@upstash/context7-mcp"]

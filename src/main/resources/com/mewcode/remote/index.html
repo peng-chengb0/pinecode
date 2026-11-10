@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f4f7fc">
+<title>PineCode Remote · Live Agent Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #080b12;
+  --panel: rgba(12, 17, 28, .78);
+  --panel-solid: #0e1421;
+  --line: rgba(122, 162, 247, .14);
+  --line-strong: rgba(122, 162, 247, .26);
+  --text: #d8e1f8;
+  --text-bright: #eef3ff;
+  --muted: #8996b6;
+  --dim: #4f5b78;
+  --accent: #8b5cf6;
+  --accent-soft: #c4b5fd;
+  --cyan: #22d3ee;
+  --blue: #7aa2f7;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #fb7185;
+  --tool-bg: rgba(13, 19, 31, .82);
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cascadia Code', 'SF Mono', 'Fira Code', Consolas, 'Microsoft YaHei', monospace;
+  font-size: 13px;
+  overflow: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(900px 480px at 12% -8%, rgba(139, 92, 246, .18), transparent 62%),
+    radial-gradient(850px 520px at 100% 0%, rgba(34, 211, 238, .09), transparent 58%),
+    radial-gradient(760px 500px at 50% 112%, rgba(59, 130, 246, .08), transparent 62%);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(122, 162, 247, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 162, 247, .035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 18%, transparent 76%);
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 18%, transparent 76%);
+}
+#app {
+  position: relative; z-index: 1; height: 100dvh; max-width: 1540px; margin: 0 auto;
+  padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 9px;
+}
+
+/* ── top bar ── */
+#topbar {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 11px 15px; border: 1px solid var(--line); border-radius: 15px;
+  background: rgba(10, 14, 24, .72); backdrop-filter: blur(18px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .26);
+}
+.brand-wrap { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.brand-mark {
+  width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center;
+  border-radius: 11px; font-size: 18px;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+  box-shadow: 0 0 24px rgba(139, 92, 246, .38);
+}
+.brand-copy { min-width: 0; }
+.brand-line { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.brand { font-size: 16px; font-weight: 700; letter-spacing: .015em; color: var(--text-bright); }
+.brand-chip {
+  font-size: 8px; letter-spacing: .14em; color: var(--cyan);
+  border: 1px solid rgba(34, 211, 238, .26); background: rgba(34, 211, 238, .07);
+  border-radius: 999px; padding: 2px 6px; white-space: nowrap;
+}
+.model-badge {
+  font-size: 9px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 7px; white-space: nowrap;
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis;
+}
+.brand-sub {
+  margin-top: 3px; font-size: 9px; color: var(--dim); letter-spacing: .09em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.top-meta { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.run-state, .meta-pill {
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  border: 1px solid var(--line); background: rgba(17, 24, 38, .72);
+  border-radius: 999px; padding: 6px 10px; font-size: 9px;
+  letter-spacing: .09em; color: var(--muted);
+}
+.run-state { color: var(--text); min-width: 86px; justify-content: center; }
+.state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); flex: 0 0 6px; }
+.run-state[data-state="running"] .state-dot { background: var(--amber); box-shadow: 0 0 0 4px rgba(251, 191, 36, .10); animation: pulse 1.2s infinite; }
+.run-state[data-state="done"] .state-dot { background: var(--green); box-shadow: 0 0 8px rgba(52, 211, 153, .65); }
+.run-state[data-state="error"] .state-dot { background: var(--red); }
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex: 0 0 6px; }
+.dot.connected { background: var(--green); box-shadow: 0 0 8px rgba(52, 211, 153, .7); }
+.dot.disconnected { background: var(--red); }
+
+/* ── session strip ── */
+#session-strip {
+  flex-shrink: 0; display: flex; align-items: center; gap: 7px;
+  padding: 0 7px; overflow: hidden; white-space: nowrap;
+  font-size: 9px; color: var(--dim); letter-spacing: .02em;
+}
+.session-label { flex: 0 0 auto; font-size: 8px; letter-spacing: .14em; color: var(--dim); }
+.session-value {
+  color: #9fb0d8; font-size: 9px; max-width: 390px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+#cwd { max-width: 640px; }
+.strip-divider { width: 1px; height: 9px; background: var(--line); margin: 0 3px; flex: 0 0 1px; }
+.strip-spacer { flex: 1; }
+.token-info { color: var(--muted); font-size: 9px; }
+.token-info span { color: var(--dim); font-size: 8px; letter-spacing: .08em; }
+.token-info i { color: var(--dim); font-style: normal; margin: 0 4px; }
+
+/* ── workspace ── */
+#workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 356px; gap: 11px; }
+#chat-panel, #process-panel {
+  min-height: 0; border: 1px solid var(--line); border-radius: 16px;
+  background: var(--panel); backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .22);
+}
+#chat-panel { display: flex; flex-direction: column; overflow: hidden; }
+#messages { flex: 1; overflow-y: auto; padding: 24px 26px 6px; scroll-behavior: smooth; }
+#messages::-webkit-scrollbar, #process-list::-webkit-scrollbar, #slash-menu::-webkit-scrollbar, .tool-body::-webkit-scrollbar {
+  width: 5px;
+}
+#messages::-webkit-scrollbar-track, #process-list::-webkit-scrollbar-track, #slash-menu::-webkit-scrollbar-track, .tool-body::-webkit-scrollbar-track { background: transparent; }
+#messages::-webkit-scrollbar-thumb, #process-list::-webkit-scrollbar-thumb, #slash-menu::-webkit-scrollbar-thumb, .tool-body::-webkit-scrollbar-thumb {
+  background: rgba(122, 162, 247, .18); border-radius: 3px;
+}
+
+/* ── welcome / demo cards ── */
+.welcome { max-width: 760px; margin: 2.2vh auto 0; padding-bottom: 16px; }
+.welcome-top { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+.kicker { font-size: 8px; letter-spacing: .2em; color: var(--cyan); white-space: nowrap; }
+.kicker-line { height: 1px; flex: 1; max-width: 85px; background: linear-gradient(90deg, rgba(34, 211, 238, .5), transparent); }
+.kicker-note { font-size: 8px; letter-spacing: .1em; color: var(--dim); white-space: nowrap; }
+.welcome h1 {
+  font-size: clamp(27px, 3vw, 41px); line-height: 1.16; letter-spacing: -.035em;
+  color: #f0f4ff; font-weight: 700;
+}
+.welcome h1 em {
+  font-style: normal;
+  background: linear-gradient(90deg, #c4b5fd 0%, #67e8f9 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.welcome-desc { max-width: 650px; color: var(--muted); font-size: 12px; line-height: 1.8; margin-top: 13px; }
+.prompt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 19px; }
+.prompt-card {
+  display: grid; grid-template-columns: 23px 1fr; grid-template-rows: auto auto;
+  column-gap: 8px; text-align: left; color: var(--text); font-family: inherit;
+  background: rgba(19, 26, 41, .64); border: 1px solid var(--line);
+  border-radius: 11px; padding: 10px 11px; cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.prompt-card:hover {
+  border-color: rgba(139, 92, 246, .44); background: rgba(29, 38, 59, .84);
+  transform: translateY(-1px); box-shadow: 0 9px 24px rgba(0, 0, 0, .2);
+}
+.prompt-icon {
+  grid-row: 1 / span 2; width: 23px; height: 23px; display: grid; place-items: center;
+  border-radius: 6px; background: rgba(139, 92, 246, .12);
+  color: var(--accent-soft); font-size: 11px;
+}
+.prompt-title { font-size: 11px; font-weight: 600; color: #e4ebff; line-height: 1.35; }
+.prompt-desc { font-size: 9px; color: var(--dim); margin-top: 2px; line-height: 1.4; }
+.welcome-foot { margin-top: 15px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.welcome-foot-label { font-size: 8px; letter-spacing: .15em; color: var(--dim); }
+.cap-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.cap-row span {
+  font-size: 8px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 6px; background: rgba(255, 255, 255, .02);
+}
+
+/* ── messages ── */
+.msg { display: flex; gap: 9px; margin-bottom: 17px; animation: rise .18s ease both; }
+.msg-user { flex-direction: row-reverse; }
+.avatar {
+  width: 25px; height: 25px; flex: 0 0 25px; display: grid; place-items: center;
+  border-radius: 7px; font-size: 8px; font-weight: 700; letter-spacing: .02em; margin-top: 2px;
+}
+.avatar.user { background: rgba(34, 211, 238, .10); border: 1px solid rgba(34, 211, 238, .26); color: var(--cyan); }
+.avatar.assistant {
+  background: linear-gradient(135deg, rgba(139, 92, 246, .25), rgba(34, 211, 238, .12));
+  border: 1px solid rgba(139, 92, 246, .32); color: #ddc9ff;
+}
+.bubble { max-width: min(780px, 88%); min-width: 0; }
+.msg-user .bubble {
+  background: rgba(28, 39, 59, .78); border: 1px solid rgba(122, 162, 247, .16);
+  border-radius: 13px 13px 4px 13px; padding: 9px 13px;
+}
+.msg-assistant .bubble { padding-top: 1px; }
+.msg-meta { font-size: 8px; letter-spacing: .12em; color: var(--dim); margin-bottom: 4px; }
+.msg-user .msg-meta { text-align: right; }
+.msg-user .content { color: #e7eeff; white-space: pre-wrap; line-height: 1.65; }
+.msg-assistant .content { color: var(--text); line-height: 1.72; overflow-wrap: anywhere; }
+.msg-assistant .content p { margin: 0 0 9px; }
+.msg-assistant .content p:last-child { margin-bottom: 0; }
+.msg-assistant .content code {
+  background: rgba(4, 8, 15, .7); border: 1px solid rgba(122, 162, 247, .10);
+  padding: 1px 5px; border-radius: 4px; font-size: 12px; color: #a5d8ff;
+}
+.msg-assistant .content pre {
+  background: rgba(4, 8, 15, .78); border: 1px solid rgba(122, 162, 247, .12);
+  padding: 11px 12px; border-radius: 7px; margin: 9px 0; overflow-x: auto;
+}
+.msg-assistant .content pre code { background: none; border: 0; padding: 0; }
+.msg-assistant .content ul, .msg-assistant .content ol { padding-left: 19px; margin: 7px 0; }
+.msg-assistant .content li { margin: 3px 0; }
+.msg-assistant .content h1, .msg-assistant .content h2, .msg-assistant .content h3 {
+  color: var(--text-bright); margin: 12px 0 7px; line-height: 1.4;
+}
+.msg-assistant .content h1 { font-size: 18px; }
+.msg-assistant .content h2 { font-size: 16px; }
+.msg-assistant .content h3 { font-size: 14px; }
+.msg-assistant .content blockquote {
+  border-left: 2px solid rgba(139, 92, 246, .55); padding-left: 11px;
+  color: var(--muted); margin: 8px 0;
+}
+.msg-assistant .content table { border-collapse: collapse; margin: 8px 0; max-width: 100%; }
+.msg-assistant .content th, .msg-assistant .content td {
+  border: 1px solid var(--line); padding: 5px 9px; text-align: left; font-size: 12px;
+}
+.msg-assistant .content th { background: rgba(122, 162, 247, .07); color: var(--text-bright); }
+.msg-assistant .content a { color: var(--cyan); text-decoration: none; }
+.msg-assistant .content a:hover { text-decoration: underline; }
+.msg-system {
+  display: flex; gap: 7px; align-items: flex-start;
+  color: var(--muted); font-size: 10px; line-height: 1.55;
+  margin: -3px 0 14px 34px;
+}
+.msg-system .sys-icon { color: var(--cyan); flex: 0 0 auto; }
+.msg-error {
+  color: #ffd4da; background: rgba(251, 113, 133, .07);
+  border: 1px solid rgba(251, 113, 133, .22); border-radius: 9px;
+  padding: 9px 11px; font-size: 11px; line-height: 1.6;
+  margin: -3px 0 14px 34px;
+}
+.done-indicator {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: #a7f3d0; background: rgba(52, 211, 153, .06);
+  border: 1px solid rgba(52, 211, 153, .18); border-radius: 999px;
+  padding: 4px 9px; font-size: 9px; letter-spacing: .04em; margin: -2px 0 15px 34px;
+}
+
+/* ── tool / thinking ── */
+.tool-block, .thinking-block {
+  margin: 9px 0 9px 34px; background: var(--tool-bg);
+  border: 1px solid rgba(122, 162, 247, .14); border-radius: 9px; overflow: hidden;
+}
+.tool-header, .thinking-header {
+  display: flex; align-items: center; gap: 7px; padding: 8px 10px;
+  cursor: pointer; user-select: none; font-size: 10px;
+}
+.tool-header:hover, .thinking-header:hover { background: rgba(255, 255, 255, .025); }
+.tool-icon {
+  width: 18px; height: 18px; flex: 0 0 18px; display: grid; place-items: center;
+  border-radius: 4px; background: rgba(139, 92, 246, .10); font-size: 9px;
+}
+.tool-header .icon, .thinking-header .icon { font-size: 8px; color: var(--dim); transition: transform .2s; }
+.tool-header .icon.expanded, .thinking-header .icon.expanded { transform: rotate(90deg); }
+.tool-header .name { color: var(--accent-soft); font-weight: 600; }
+.tool-header .status { margin-left: auto; font-size: 9px; white-space: nowrap; }
+.tool-header .status.ok { color: var(--green); }
+.tool-header .status.err { color: var(--red); }
+.tool-header .status.loading { color: var(--amber); }
+.tool-body, .thinking-body {
+  display: none; padding: 8px 10px; border-top: 1px solid var(--line);
+  font-size: 10px; max-height: 280px; overflow-y: auto; white-space: pre-wrap;
+  color: var(--muted); background: rgba(0, 0, 0, .13); line-height: 1.55;
+}
+.tool-body.show, .thinking-body.show { display: block; }
+.thinking-header { color: var(--muted); }
+.thinking-body { font-style: italic; color: #7f8bab; }
+
+/* ── permission / ask ── */
+.perm-dialog {
+  margin: 10px 0 14px 34px; background: rgba(35, 29, 17, .58);
+  border: 1px solid rgba(251, 191, 36, .3); border-radius: 10px; padding: 12px;
+}
+.perm-dialog .title { color: var(--amber); font-weight: 600; margin-bottom: 7px; font-size: 11px; }
+.perm-dialog .desc { color: var(--text); margin-bottom: 10px; font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+.perm-dialog .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.perm-dialog button {
+  padding: 5px 11px; border-radius: 5px; border: 1px solid var(--line);
+  cursor: pointer; font-family: inherit; font-size: 10px; color: var(--text);
+  background: rgba(255, 255, 255, .03);
+}
+.btn-allow { background: var(--green) !important; color: #04120b !important; border-color: var(--green) !important; font-weight: 600; }
+.btn-deny { color: var(--red) !important; border-color: rgba(251, 113, 133, .45) !important; }
+.btn-always { color: var(--blue) !important; border-color: rgba(122, 162, 247, .4) !important; }
+
+/* ── composer ── */
+#composer-wrap {
+  flex-shrink: 0; position: relative; padding: 9px 17px 10px;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(10, 14, 24, .08), rgba(10, 14, 24, .66));
+}
+#composer {
+  display: flex; align-items: flex-end; gap: 9px;
+  background: rgba(7, 11, 19, .82); border: 1px solid rgba(122, 162, 247, .18);
+  border-radius: 12px; padding: 8px 10px; transition: .18s ease;
+}
+#composer:focus-within {
+  border-color: rgba(139, 92, 246, .52);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, .07), 0 8px 28px rgba(0, 0, 0, .2);
+}
+.composer-prefix { color: var(--cyan); font-size: 13px; line-height: 23px; padding: 0 1px; flex: 0 0 auto; }
+#input {
+  flex: 1; min-height: 23px; max-height: 180px; resize: none; border: 0; outline: 0;
+  background: transparent; color: var(--text); font-family: inherit; font-size: 12px;
+  line-height: 1.6; padding: 1px 0;
+}
+#input::placeholder { color: #4d5975; }
+#send-btn {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  border: 0; border-radius: 8px; padding: 7px 12px;
+  background: linear-gradient(135deg, #8b5cf6, #6d5dfc);
+  color: #fff; font-family: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; box-shadow: 0 6px 18px rgba(109, 93, 252, .25); transition: .18s ease;
+}
+#send-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(109, 93, 252, .35); }
+#send-btn:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+#send-btn span { font-size: 9px; opacity: .65; }
+.composer-hint {
+  display: flex; justify-content: space-between; gap: 9px;
+  margin-top: 5px; color: #46526f; font-size: 8px; letter-spacing: .02em;
+}
+#permission-hint { color: #5b6889; letter-spacing: .08em; white-space: nowrap; }
+
+/* ── slash menu ── */
+#slash-menu {
+  display: none; position: absolute; left: 17px; right: 17px;
+  bottom: calc(100% + 3px); background: rgba(14, 20, 33, .98);
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  max-height: 230px; overflow-y: auto; box-shadow: 0 18px 44px rgba(0, 0, 0, .44); z-index: 30;
+}
+#slash-menu.show { display: block; }
+.slash-item { padding: 7px 10px; cursor: pointer; display: flex; gap: 8px; align-items: baseline; }
+.slash-item:hover, .slash-item.active { background: rgba(139, 92, 246, .12); }
+.slash-item .cmd-name { color: var(--accent-soft); font-weight: 600; white-space: nowrap; font-size: 11px; }
+.slash-item .cmd-desc { color: var(--dim); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── process panel ── */
+#process-panel { display: flex; flex-direction: column; overflow: hidden; }
+.panel-head {
+  flex-shrink: 0; padding: 15px 15px 9px; display: flex;
+  justify-content: space-between; align-items: flex-start; gap: 8px;
+}
+.panel-kicker { font-size: 8px; letter-spacing: .2em; color: var(--cyan); }
+.panel-title-row { display: flex; align-items: baseline; gap: 7px; margin-top: 2px; }
+.panel-head h2 { font-size: 15px; letter-spacing: .01em; color: var(--text-bright); }
+.run-label { font-size: 8px; color: var(--dim); letter-spacing: .1em; }
+.live-badge {
+  display: flex; align-items: center; gap: 5px; font-size: 8px;
+  letter-spacing: .11em; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 7px; margin-top: 2px;
+}
+.live-badge i { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); }
+.live-badge.on { color: var(--green); border-color: rgba(52, 211, 153, .25); background: rgba(52, 211, 153, .05); }
+.live-badge.on i { background: var(--green); box-shadow: 0 0 8px rgba(52, 211, 153, .8); animation: pulse 1.2s infinite; }
+.stage-bar { flex-shrink: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 15px 9px; }
+.stage {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 2px; border: 1px solid var(--line); border-radius: 6px;
+  color: var(--dim); transition: .2s ease;
+}
+.stage b { font-size: 7px; font-weight: 500; letter-spacing: .1em; color: #3f4a66; }
+.stage span { font-size: 8px; }
+.stage.active { color: #eadcff; border-color: rgba(139, 92, 246, .46); background: rgba(139, 92, 246, .10); }
+.stage.active b { color: var(--accent-soft); }
+.stage.done { color: #a7f3d0; border-color: rgba(52, 211, 153, .22); background: rgba(52, 211, 153, .05); }
+.stage.done b { color: var(--green); }
+.process-list { flex: 1; overflow-y: auto; padding: 3px 15px 8px; min-height: 0; }
+.process-empty {
+  border: 1px dashed rgba(122, 162, 247, .16); border-radius: 9px;
+  padding: 15px 11px 12px; text-align: center; color: var(--dim); font-size: 9px; line-height: 1.6;
+}
+.empty-glyph { display: block; font-size: 17px; color: #3f4a66; margin-bottom: 4px; }
+.empty-flow { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 9px; flex-wrap: wrap; }
+.empty-flow span { font-size: 7px; color: #5d6b8d; border: 1px solid var(--line); border-radius: 999px; padding: 2px 5px; }
+.empty-flow i { color: #3f4a66; font-style: normal; font-size: 8px; }
+.trace-item {
+  display: flex; gap: 7px; padding: 8px 0;
+  border-bottom: 1px solid rgba(122, 162, 247, .07); animation: rise .16s ease both;
+}
+.trace-icon {
+  width: 21px; height: 21px; flex: 0 0 21px; display: grid; place-items: center;
+  border-radius: 6px; font-size: 9px; border: 1px solid var(--line);
+  color: var(--muted); background: rgba(255, 255, 255, .02);
+}
+.trace-body { flex: 1; min-width: 0; }
+.trace-title { font-size: 9px; font-weight: 600; color: #c8d4f2; line-height: 1.4; }
+.trace-detail {
+  font-size: 8px; line-height: 1.5; color: var(--dim); margin-top: 2px;
+  white-space: pre-wrap; word-break: break-word; max-height: 50px; overflow: hidden;
+}
+.trace-time { flex-shrink: 0; font-size: 8px; color: #3f4a66; padding-top: 2px; }
+.trace-item.running .trace-icon { color: var(--amber); border-color: rgba(251, 191, 36, .25); animation: pulse 1.2s infinite; }
+.trace-item.done .trace-icon { color: var(--green); border-color: rgba(52, 211, 153, .25); }
+.trace-item.error .trace-icon { color: var(--red); border-color: rgba(251, 113, 133, .25); }
+.trace-item.think .trace-icon { color: var(--cyan); }
+.trace-item.tool .trace-icon { color: var(--accent-soft); }
+.trace-item.answer .trace-icon { color: #93c5fd; }
+.trace-item.start .trace-icon { color: var(--cyan); }
+.panel-stats {
+  flex-shrink: 0; display: flex; gap: 11px; padding: 7px 15px;
+  border-top: 1px solid var(--line); color: var(--dim);
+  font-size: 7px; letter-spacing: .08em;
+}
+.panel-stats b { color: var(--muted); font-weight: 500; }
+.panel-foot { flex-shrink: 0; padding: 9px 15px 13px; border-top: 1px solid var(--line); }
+.capability-label { font-size: 7px; letter-spacing: .15em; color: var(--dim); margin-bottom: 5px; }
+.capability-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.capability-tags span {
+  font-size: 7px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 5px; background: rgba(255, 255, 255, .02);
+}
+
+/* ── animations ── */
+@keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.cursor { animation: blink 1s step-end infinite; color: var(--cyan); }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── responsive ── */
+@media (max-width: 1180px) {
+  #workspace { grid-template-columns: minmax(0, 1fr) 320px; }
+  #cwd { max-width: 420px; }
+}
+@media (max-width: 960px) {
+  #app { padding: 9px 10px 11px; }
+  #workspace { grid-template-columns: 1fr; }
+  #process-panel { display: none; }
+  #cwd { display: none; }
+  .strip-divider:nth-of-type(2) { display: none; }
+}
+@media (max-width: 680px) {
+  #topbar { padding: 9px 11px; gap: 8px; }
+  .brand-sub, .model-badge { display: none; }
+  .brand-mark { width: 34px; height: 34px; flex-basis: 34px; font-size: 16px; }
+  .brand { font-size: 14px; }
+  .top-meta { gap: 5px; }
+  .run-state, .meta-pill { padding: 5px 7px; font-size: 8px; }
+  .run-state { min-width: 70px; }
+  #messages { padding: 17px 14px 4px; }
+  #composer-wrap { padding: 8px 11px 9px; }
+  .prompt-grid { grid-template-columns: 1fr; }
+  .welcome h1 { font-size: 25px; }
+  .welcome-desc { font-size: 11px; }
+  .msg-user .bubble, .msg-assistant .bubble { max-width: 92%; }
+  .composer-hint span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #permission-hint { display: none; }
+}
+
+/* ── light theme ── */
+html { color-scheme: light; }
+:root {
+  --bg: #f4f7fc;
+  --panel: rgba(255, 255, 255, .90);
+  --panel-solid: #ffffff;
+  --line: rgba(15, 23, 42, .10);
+  --line-strong: rgba(15, 23, 42, .18);
+  --text: #334155;
+  --text-bright: #0f172a;
+  --muted: #5f6f89;
+  --dim: #7b89a3;
+  --accent: #6d5dfc;
+  --accent-soft: #5b4bd6;
+  --cyan: #0891b2;
+  --blue: #2563eb;
+  --green: #059669;
+  --amber: #d97706;
+  --red: #dc2626;
+  --tool-bg: #f8fafc;
+  --bg-input: #ffffff;
+}
+body { background: #f4f7fc; color: var(--text); }
+body::before {
+  background:
+    radial-gradient(900px 480px at 12% -8%, rgba(109, 93, 252, .11), transparent 62%),
+    radial-gradient(850px 520px at 100% 0%, rgba(8, 145, 178, .08), transparent 58%),
+    radial-gradient(760px 500px at 50% 112%, rgba(37, 99, 235, .05), transparent 62%);
+}
+body::after {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+}
+#topbar {
+  background: rgba(255, 255, 255, .86);
+  border-color: var(--line);
+  box-shadow: 0 14px 40px rgba(30, 64, 120, .07);
+}
+.brand-mark { box-shadow: 0 0 22px rgba(109, 93, 252, .24); }
+.brand { color: #0f172a; }
+.brand-sub { color: #94a3b8; }
+.brand-chip { color: #0e7490; border-color: rgba(8, 145, 178, .22); background: rgba(8, 145, 178, .06); }
+.model-badge { color: #64748b; background: #fff; }
+.run-state, .meta-pill { background: rgba(255, 255, 255, .82); color: #64748b; }
+.run-state { color: #334155; }
+.session-value { color: #475569; }
+.token-info, .token-info span, .token-info i { color: #7b89a3; }
+
+#chat-panel, #process-panel {
+  background: rgba(255, 255, 255, .90);
+  box-shadow: 0 18px 46px rgba(30, 64, 120, .06);
+}
+#messages::-webkit-scrollbar-thumb,
+#process-list::-webkit-scrollbar-thumb,
+#slash-menu::-webkit-scrollbar-thumb,
+.tool-body::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, .16); }
+
+.kicker { color: #0891b2; }
+.kicker-note { color: #94a3b8; }
+.welcome h1 { color: #0f172a; }
+.welcome h1 em { background: linear-gradient(90deg, #6d5dfc 0%, #0891b2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.welcome-desc { color: #5f6f89; }
+.prompt-card { background: #fff; border-color: var(--line); box-shadow: 0 4px 14px rgba(30, 64, 120, .035); }
+.prompt-card:hover { background: #faf9ff; border-color: rgba(109, 93, 252, .30); box-shadow: 0 10px 24px rgba(109, 93, 252, .09); }
+.prompt-icon { background: #eef2ff; color: #5b4bd6; }
+.prompt-title { color: #1e293b; }
+.prompt-desc { color: #64748b; }
+.cap-row span { background: #fff; color: #64748b; }
+
+.avatar.user { background: #ecfeff; border-color: #bae6fd; color: #0e7490; }
+.avatar.assistant { background: linear-gradient(135deg, #ede9fe, #e0f2fe); border-color: #ddd6fe; color: #5b4bd6; }
+.msg-user .bubble { background: #eef2ff; border-color: #dfe5ff; }
+.msg-user .content { color: #1e293b; }
+.msg-assistant .content { color: #334155; }
+.msg-meta { color: #94a3b8; }
+.msg-assistant .content code { background: #eef2ff; border-color: #e0e7ff; color: #4338ca; }
+.msg-assistant .content pre { background: #f8fafc; border-color: #e2e8f0; }
+.msg-assistant .content pre code { color: #334155; }
+.msg-assistant .content th { background: #f1f5f9; }
+.msg-assistant .content blockquote { border-left-color: #c4b5fd; color: #64748b; }
+.msg-assistant .content a { color: #087ea4; }
+.msg-system { color: #7b89a3; }
+.msg-system .sys-icon { color: #0891b2; }
+.msg-error { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.done-indicator { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+
+.tool-block, .thinking-block { background: #f8fafc; border-color: #e2e8f0; }
+.tool-header:hover, .thinking-header:hover { background: #f1f5f9; }
+.tool-icon { background: #eef2ff; }
+.tool-header .name { color: #5b4bd6; }
+.tool-body { background: #fff; color: #64748b; }
+.thinking-header { color: #7b89a3; }
+.thinking-body { background: #f8fafc; color: #7b89a3; }
+.tool-header .status.loading { color: #b45309; }
+.tool-header .status.ok { color: #047857; }
+.tool-header .status.err { color: #b91c1c; }
+
+.perm-dialog { background: #fffbeb; border-color: #fcd34d; }
+.perm-dialog .title { color: #b45309; }
+.perm-dialog .desc { color: #475569; }
+.perm-dialog button { background: #fff; color: #475569; border-color: #e2e8f0; }
+.perm-dialog .title, .perm-dialog .desc { text-shadow: none; }
+
+#composer-wrap { background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .78)); }
+#composer { background: #fff; border-color: #dbe3f0; }
+#composer:focus-within { border-color: rgba(109, 93, 252, .48); box-shadow: 0 0 0 3px rgba(109, 93, 252, .07), 0 8px 28px rgba(30, 64, 120, .06); }
+.composer-prefix { color: #0891b2; }
+#input { color: #1e293b; }
+#input::placeholder { color: #9aa8bd; }
+.composer-hint { color: #7b89a3; }
+#permission-hint { color: #7b89a3; }
+#send-btn { background: linear-gradient(135deg, #6d5dfc, #5b4bd6); box-shadow: 0 6px 18px rgba(109, 93, 252, .22); }
+
+#slash-menu { background: #fff; border-color: #dbe3f0; box-shadow: 0 18px 44px rgba(30, 64, 120, .12); }
+.slash-item:hover, .slash-item.active { background: #f5f3ff; }
+.slash-item .cmd-name { color: #5b4bd6; }
+.slash-item .cmd-desc { color: #94a3b8; }
+
+.live-badge { background: #fff; }
+.live-badge.on { color: #047857; border-color: #a7f3d0; background: #ecfdf5; }
+.stage { background: #fff; border-color: #e2e8f0; color: #64748b; }
+.stage b { color: #94a3b8; }
+.stage.active { color: #5b4bd6; border-color: #c4b5fd; background: #f5f3ff; }
+.stage.active b { color: #6d5dfc; }
+.stage.done { color: #047857; border-color: #a7f3d0; background: #ecfdf5; }
+.stage.done b { color: #059669; }
+.process-empty { border-color: #dbe3f0; background: #fbfcfe; color: #64748b; }
+.empty-flow span { background: #fff; color: #64748b; }
+.empty-flow i { color: #b6c2d4; }
+.trace-item { border-bottom-color: #eef2f7; }
+.trace-icon { background: #fff; border-color: #e2e8f0; color: #7b89a3; }
+.trace-title { color: #334155; }
+.trace-detail { color: #64748b; }
+.trace-time { color: #94a3b8; }
+.trace-item.running .trace-icon { color: #b45309; border-color: #fde68a; background: #fffbeb; }
+.trace-item.done .trace-icon { color: #059669; border-color: #a7f3d0; background: #ecfdf5; }
+.trace-item.error .trace-icon { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+.trace-item.think .trace-icon { color: #0891b2; background: #ecfeff; border-color: #bae6fd; }
+.trace-item.tool .trace-icon { color: #5b4bd6; background: #eef2ff; border-color: #ddd6fe; }
+.trace-item.answer .trace-icon { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
+.trace-item.start .trace-icon { color: #0891b2; background: #ecfeff; border-color: #bae6fd; }
+.panel-stats { color: #64748b; border-top-color: #eef2f7; }
+.panel-stats b { color: #334155; }
+.panel-foot { border-top-color: #eef2f7; }
+.capability-label { color: #64748b; }
+.capability-tags span { background: #fff; color: #475569; }
+
+/* ── readable type scale for demo / defense ── */
+@media (min-width: 900px) {
+  body { font-size: 15px; }
+  #app { max-width: 1680px; padding: 16px 20px 18px; gap: 10px; }
+  #topbar { padding: 13px 18px; }
+  .brand-mark { width: 42px; height: 42px; flex-basis: 42px; font-size: 20px; }
+  .brand { font-size: 18px; }
+  .brand-sub { font-size: 11px; }
+  .brand-chip { font-size: 9px; padding: 3px 8px; }
+  .model-badge { font-size: 11px; padding: 3px 9px; }
+  .run-state, .meta-pill { font-size: 11px; padding: 7px 12px; }
+  .run-state { min-width: 96px; }
+  .state-dot, .dot { width: 7px; height: 7px; }
+  #session-strip { font-size: 11px; gap: 8px; }
+  .session-label { font-size: 9.5px; }
+  .session-value { font-size: 11px; }
+  .token-info { font-size: 11px; }
+  .token-info span { font-size: 9px; }
+
+  #messages { padding: 28px 30px 8px; }
+  .welcome { max-width: 840px; margin-top: 3vh; }
+  .welcome-top { margin-bottom: 18px; }
+  .kicker { font-size: 10px; }
+  .kicker-note { font-size: 10px; }
+  .welcome h1 { font-size: clamp(36px, 3.4vw, 50px); }
+  .welcome-desc { font-size: 15px; line-height: 1.8; max-width: 720px; }
+  .prompt-grid { gap: 10px; margin-top: 22px; }
+  .prompt-card { padding: 13px 14px; grid-template-columns: 27px 1fr; column-gap: 10px; }
+  .prompt-icon { width: 27px; height: 27px; font-size: 13px; }
+  .prompt-title { font-size: 14px; }
+  .prompt-desc { font-size: 11.5px; }
+  .welcome-foot { margin-top: 18px; }
+  .welcome-foot-label { font-size: 9px; }
+  .cap-row span { font-size: 10px; padding: 3px 8px; }
+
+  .msg { gap: 10px; margin-bottom: 19px; }
+  .avatar { width: 29px; height: 29px; flex-basis: 29px; font-size: 9px; }
+  .msg-meta { font-size: 10px; }
+  .msg-user .content, .msg-assistant .content { font-size: 15px; line-height: 1.75; }
+  .msg-assistant .content code { font-size: 13px; }
+  .tool-block, .thinking-block { margin-left: 39px; }
+  .tool-header, .thinking-header { font-size: 12.5px; padding: 9px 11px; }
+  .tool-icon { width: 21px; height: 21px; flex-basis: 21px; font-size: 11px; }
+  .tool-header .status { font-size: 10.5px; }
+  .tool-body, .thinking-body { font-size: 12.5px; line-height: 1.6; }
+  .msg-system { font-size: 11.5px; margin-left: 39px; }
+  .msg-error { font-size: 12.5px; margin-left: 39px; }
+  .done-indicator { font-size: 10px; margin-left: 39px; padding: 5px 10px; }
+  .perm-dialog { margin-left: 39px; padding: 14px; }
+  .perm-dialog .title { font-size: 13px; }
+  .perm-dialog .desc { font-size: 12px; }
+  .perm-dialog button { font-size: 11px; padding: 6px 13px; }
+
+  .panel-head h2 { font-size: 18px; }
+  .panel-kicker { font-size: 10px; }
+  .run-label { font-size: 9px; }
+  .live-badge { font-size: 9px; padding: 4px 8px; }
+  .process-empty { font-size: 10.5px; }
+  .empty-flow span { font-size: 8.5px; }
+  .stage b { font-size: 9px; }
+  .stage span { font-size: 10.5px; }
+  .trace-title { font-size: 12px; }
+  .trace-detail {
+    font-size: 11px; line-height: 1.5; max-height: none;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .trace-time { font-size: 9.5px; }
+  .panel-stats { font-size: 9.5px; gap: 12px; }
+  .capability-label { font-size: 9px; }
+  .capability-tags span { font-size: 9px; padding: 3px 7px; }
+
+  #composer { padding: 10px 12px; }
+  .composer-prefix { font-size: 15px; line-height: 26px; }
+  #input { font-size: 14px; line-height: 1.65; min-height: 26px; }
+  #send-btn { font-size: 13px; padding: 8px 14px; }
+  .composer-hint { font-size: 10px; }
+  #slash-menu .cmd-name { font-size: 13px; }
+  #slash-menu .cmd-desc { font-size: 11px; }
+}
+
+@media (min-width: 1280px) {
+  #workspace { grid-template-columns: minmax(0, 1fr) 410px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand-wrap">
+      <div class="brand-mark">⚡</div>
+      <div class="brand-copy">
+        <div class="brand-line">
+          <span class="brand">PineCode</span>
+          <span class="brand-chip">REMOTE</span>
+          <span class="model-badge" id="model-badge">deepseek-flash</span>
+        </div>
+        <div class="brand-sub">Java coding agent · live execution trace</div>
+      </div>
+    </div>
+    <div class="top-meta">
+      <div class="run-state" id="run-state" data-state="idle"><span class="state-dot"></span><span id="run-state-text">IDLE</span></div>
+      <div class="meta-pill" id="elapsed">0.0s</div>
+      <div class="meta-pill conn" id="conn-status"><span class="dot disconnected"></span>Connecting</div>
+    </div>
+  </header>
+
+  <div id="session-strip">
+    <span class="session-label">SESSION</span><span class="session-value" id="session-id">--</span>
+    <span class="strip-divider"></span>
+    <span class="session-label">CWD</span><span class="session-value" id="cwd" title="">--</span>
+    <span class="strip-spacer"></span>
+    <span class="token-info" id="token-info"><span>IN</span> 0 <i>/</i> <span>OUT</span> 0</span>
+  </div>
+
+  <main id="workspace">
+    <section id="chat-panel">
+      <div id="messages">
+        <div id="welcome" class="welcome">
+          <div class="welcome-top">
+            <span class="kicker">AGENT READY</span>
+            <span class="kicker-line"></span>
+            <span class="kicker-note">JAVA 21 · REACT LOOP</span>
+          </div>
+          <h1>把一句需求，变成一次<br><em>可观察的编码过程</em></h1>
+          <p class="welcome-desc">PineCode 会在真实仓库中检索、编辑、执行与验证。右侧轨迹会同步展示它的思考、工具调用和观察结果，而不是只给出一段黑盒回答。</p>
+          <div class="prompt-grid">
+            <button class="prompt-card" onclick="usePrompt('先介绍一下这个项目的整体架构，以及各个模块的职责')">
+              <span class="prompt-icon">⌘</span>
+              <span class="prompt-title">读懂这个项目</span>
+              <span class="prompt-desc">从入口到五层架构，先建立全局认知</span>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('阅读 build.gradle.kts，说明这个项目用了哪些技术栈')">
+              <span class="prompt-icon">▤</span>
+              <span class="prompt-title">查看技术栈</span>
+              <span class="prompt-desc">让 Agent 读取构建文件并归纳依赖</span>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('列出 src/main/java 下的核心模块，并按功能分类')">
+              <span class="prompt-icon">⌗</span>
+              <span class="prompt-title">扫描核心模块</span>
+              <span class="prompt-desc">用 Glob / Grep 观察仓库结构</span>
+            </button>
+            <button class="prompt-card" onclick="usePrompt('解释 Agent Loop 的终止条件，并定位对应源码')">
+              <span class="prompt-icon">↻</span>
+              <span class="prompt-title">拆解 Agent Loop</span>
+              <span class="prompt-desc">从问题到源码，展示推理与检索过程</span>
+            </button>
+          </div>
+          <div class="welcome-foot">
+            <span class="welcome-foot-label">CAPABILITIES</span>
+            <div class="cap-row">
+              <span>ReAct Loop</span><span>Function Calling</span><span>Tool Trace</span><span>权限控制</span><span>上下文管理</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="composer-wrap">
+        <div id="slash-menu"></div>
+        <div id="composer">
+          <span class="composer-prefix">❯</span>
+          <textarea id="input" placeholder="描述一个任务，或点击上方的示例开始..." rows="1"></textarea>
+          <button id="send-btn">Send <span>↵</span></button>
+        </div>
+        <div class="composer-hint">
+          <span>Enter 发送 · Shift + Enter 换行 · 输入 / 查看命令</span>
+          <span id="permission-hint">DEFAULT PERMISSION</span>
+        </div>
+      </div>
+    </section>
+
+    <aside id="process-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-kicker">LIVE TRACE</div>
+          <div class="panel-title-row"><h2>运行轨迹</h2><span class="run-label" id="run-label">RUN 00</span></div>
+        </div>
+        <span class="live-badge" id="live-badge"><i></i><span id="live-text">LIVE</span></span>
+      </div>
+      <div class="stage-bar" id="stage-bar">
+        <div class="stage" data-stage="think"><b>01</b><span>思考</span></div>
+        <div class="stage" data-stage="tool"><b>02</b><span>行动</span></div>
+        <div class="stage" data-stage="observe"><b>03</b><span>观察</span></div>
+        <div class="stage" data-stage="answer"><b>04</b><span>回答</span></div>
+      </div>
+      <div id="process-list" class="process-list">
+        <div class="process-empty"><span class="empty-glyph">⌁</span><p>发送一条消息后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>
+      </div>
+      <div class="panel-stats">
+        <span>STEPS <b id="step-count">0</b></span>
+        <span>TOOLS <b id="tool-count">0</b></span>
+        <span>ELAPSED <b id="panel-elapsed">0.0s</b></span>
+      </div>
+      <div class="panel-foot">
+        <div class="capability-label">RUNTIME</div>
+        <div class="capability-tags">
+          <span>Java 21</span><span>JLine 3</span><span>MCP</span><span>JUnit 5</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send-btn');
+const connStatus = document.getElementById('conn-status');
+const tokenInfo = document.getElementById('token-info');
+const slashMenu = document.getElementById('slash-menu');
+const sessionIdEl = document.getElementById('session-id');
+const cwdEl = document.getElementById('cwd');
+const runStateEl = document.getElementById('run-state');
+const runStateText = document.getElementById('run-state-text');
+const elapsedEl = document.getElementById('elapsed');
+const panelElapsedEl = document.getElementById('panel-elapsed');
+const processList = document.getElementById('process-list');
+const runLabel = document.getElementById('run-label');
+const liveBadge = document.getElementById('live-badge');
+const liveText = document.getElementById('live-text');
+const stepCountEl = document.getElementById('step-count');
+const toolCountEl = document.getElementById('tool-count');
+const stageEls = Array.from(document.querySelectorAll('.stage'));
+const welcomeHTML = document.getElementById('welcome').outerHTML;
+
+let ws = null;
+let streaming = false;
+let allCommands = [];
+let slashCursor = 0;
+let slashFiltered = [];
+let currentAssistantEl = null;
+let currentStreamText = '';
+let currentThinkingEl = null;
+let currentThinkingText = '';
+let autoScroll = true;
+let pingTimer = null;
+let toolElements = {};
+let toolTraces = {};
+let thinkingTrace = null;
+let answerTrace = null;
+let activeTools = 0;
+let runStart = 0;
+let elapsedTimer = null;
+let runIndex = 0;
+let stepCount = 0;
+let toolCount = 0;
+
+const toolIcons = {
+  ReadFile: '▤', WriteFile: '✎', EditFile: '✎', Bash: '⌘',
+  Glob: '⌗', Grep: '⌕', AskUserQuestion: '?', Agent: '◎'
+};
+
+// Markdown 渲染配置
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+
+function renderMarkdown(text) {
+  if (typeof marked !== 'undefined') {
+    try { return marked.parse(text); } catch (e) {}
+  }
+  return escapeHtml(text);
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function formatTokens(n) {
+  const value = Number(n) || 0;
+  if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+  if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+  return String(value);
+}
+
+function nowLabel() {
+  return new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
+}
+
+function clean(text) {
+  return String(text == null ? '' : text)
+    .replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+}
+
+function clip(text, max) {
+  const s = clean(text).replace(/\s+/g, ' ').trim();
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
+function hideWelcome() {
+  const el = document.getElementById('welcome');
+  if (el) el.style.display = 'none';
+}
+
+// ── connection ──
+function connect() {
+  if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+  if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/ws');
+
+  ws.onopen = () => {
+    connStatus.innerHTML = '<span class="dot connected"></span>Connected';
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping', data: {} }));
+      }
+    }, 10000);
+  };
+
+  ws.onclose = () => {
+    connStatus.innerHTML = '<span class="dot disconnected"></span>Reconnecting';
+    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {};
+  ws.onmessage = (evt) => {
+    try { handleMessage(JSON.parse(evt.data)); } catch (e) {}
+  };
+}
+
+// ── runtime state ──
+function setRunState(state, label) {
+  runStateEl.dataset.state = state;
+  runStateText.textContent = label;
+}
+
+function updateStats() {
+  stepCountEl.textContent = stepCount;
+  toolCountEl.textContent = toolCount;
+}
+
+function startRun(prompt) {
+  runIndex += 1;
+  runLabel.textContent = 'RUN ' + String(runIndex).padStart(2, '0');
+  stepCount = 0;
+  toolCount = 0;
+  toolElements = {};
+  toolTraces = {};
+  thinkingTrace = null;
+  answerTrace = null;
+  activeTools = 0;
+  processList.innerHTML = '';
+  updateStats();
+  addTrace('start', '接收任务', clip(prompt, 110));
+  setRunState('running', 'THINKING');
+  setStage('think');
+  liveBadge.classList.add('on');
+  liveText.textContent = 'LIVE';
+  runStart = Date.now();
+  elapsedEl.textContent = '0.0s';
+  panelElapsedEl.textContent = '0.0s';
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    const s = ((Date.now() - runStart) / 1000).toFixed(1);
+    elapsedEl.textContent = s + 's';
+    panelElapsedEl.textContent = s + 's';
+  }, 100);
+}
+
+function stopRun(state, elapsedSeconds) {
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  const elapsed = elapsedSeconds != null
+    ? Number(elapsedSeconds)
+    : (runStart ? (Date.now() - runStart) / 1000 : 0);
+  elapsedEl.textContent = elapsed.toFixed(1) + 's';
+  panelElapsedEl.textContent = elapsed.toFixed(1) + 's';
+  setRunState(state, state === 'done' ? 'DONE' : state === 'error' ? 'ERROR' : 'IDLE');
+  liveBadge.classList.remove('on');
+  liveText.textContent = state === 'done' ? 'IDLE' : state === 'error' ? 'IDLE' : 'LIVE';
+}
+
+function setStage(name) {
+  const order = ['think', 'tool', 'observe', 'answer'];
+  const idx = order.indexOf(name);
+  stageEls.forEach((el) => {
+    const i = order.indexOf(el.dataset.stage);
+    el.classList.toggle('done', i < idx);
+    el.classList.toggle('active', i === idx);
+  });
+}
+
+function resetStages() {
+  stageEls.forEach((el) => el.classList.remove('done', 'active'));
+}
+
+function finishStages() {
+  stageEls.forEach((el) => { el.classList.remove('active'); el.classList.add('done'); });
+}
+
+// ── trace ──
+const traceIcons = {
+  start: '▶', think: '✦', tool: '⚙', observe: '◉', answer: '✎',
+  permission: '⌁', done: '✓', error: '✕', info: 'ℹ'
+};
+
+function addTrace(type, title, detail, status) {
+  const el = document.createElement('div');
+  el.className = 'trace-item ' + type + ' running';
+  el._start = Date.now();
+  el.innerHTML =
+    '<div class="trace-icon">' + (traceIcons[type] || '·') + '</div>' +
+    '<div class="trace-body">' +
+      '<div class="trace-title">' + escapeHtml(title) + '</div>' +
+      '<div class="trace-detail">' + escapeHtml(clip(detail, 180)) + '</div>' +
+    '</div>' +
+    '<div class="trace-time">···</div>';
+  processList.appendChild(el);
+  stepCount += 1;
+  updateStats();
+  processList.scrollTop = processList.scrollHeight;
+  if (status === 'done' || status === 'error') {
+    el.classList.remove('running');
+    el.classList.add(status);
+    el.querySelector('.trace-time').textContent = '0.0s';
+  }
+  return el;
+}
+
+function updateTrace(el, status, detail) {
+  if (!el) return;
+  el.classList.remove('running');
+  el.classList.add(status);
+  if (detail !== undefined) {
+    el.querySelector('.trace-detail').textContent = clip(detail, 240);
+  }
+  const seconds = el._start ? (Date.now() - el._start) / 1000 : 0;
+  el.querySelector('.trace-time').textContent = seconds.toFixed(1) + 's';
+  processList.scrollTop = processList.scrollHeight;
+}
+
+function updateTokenInfo(input, output) {
+  tokenInfo.innerHTML = '<span>IN</span> ' + formatTokens(input) + '<i>/</i><span>OUT</span> ' + formatTokens(output);
+}
+
+// ── message handling ──
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'connected': {
+      sessionIdEl.textContent = msg.data.session || '--';
+      const cwd = msg.data.cwd || '--';
+      cwdEl.textContent = cwd;
+      cwdEl.title = cwd;
+      break;
+    }
+
+    case 'commands':
+      allCommands = msg.data || [];
+      break;
+
+    case 'system':
+      addSystem(msg.data.message);
+      break;
+
+    case 'clear':
+      messagesEl.innerHTML = welcomeHTML;
+      processList.innerHTML = '<div class="process-empty"><span class="empty-glyph">⌁</span><p>发送一条消息后，这里会实时展示思考、工具调用与观察结果。</p><div class="empty-flow"><span>思考</span><i>→</i><span>行动</span><i>→</i><span>观察</span><i>→</i><span>回答</span></div></div>';
+      stepCount = 0; toolCount = 0; updateStats();
+      resetStages();
+      setRunState('idle', 'IDLE');
+      liveBadge.classList.remove('on');
+      liveText.textContent = 'IDLE';
+      if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+      elapsedEl.textContent = '0.0s';
+      panelElapsedEl.textContent = '0.0s';
+      streaming = false;
+      updateUI();
+      break;
+
+    case 'command_done':
+      streaming = false;
+      stopRun('done');
+      updateUI();
+      break;
+
+    case 'replay_user':
+      hideWelcome();
+      addUser(msg.data.content);
+      break;
+
+    case 'replay_assistant': {
+      hideWelcome();
+      const el = addAssistant('');
+      updateAssistant(el, msg.data.content, false);
+      break;
+    }
+
+    case 'stream_text':
+      hideWelcome();
+      if (currentThinkingEl) {
+        const thinkingBody = currentThinkingEl.querySelector('.thinking-body');
+        if (!thinkingBody || !thinkingBody.textContent.trim()) {
+          currentThinkingEl.remove();
+        } else {
+          currentThinkingEl.querySelector('.thinking-header span:last-child').textContent = '💭 Thought';
+        }
+        currentThinkingEl = null;
+        currentThinkingText = '';
+      }
+      if (!currentAssistantEl) {
+        currentAssistantEl = addAssistant('');
+        currentStreamText = '';
+      }
+      if (!answerTrace) answerTrace = addTrace('answer', '生成回答', '正在组织自然语言回复…');
+      if (activeTools === 0) setStage('answer');
+      currentStreamText += msg.data.text;
+      updateAssistant(currentAssistantEl, currentStreamText, true);
+      if (currentStreamText.length < 600) {
+        updateTrace(answerTrace, 'running', clip(currentStreamText, 180));
+      }
+      break;
+
+    case 'stream_end':
+      if (currentAssistantEl) updateAssistant(currentAssistantEl, currentStreamText, false);
+      if (answerTrace) updateTrace(answerTrace, 'done', clip(currentStreamText, 180));
+      currentAssistantEl = null;
+      currentStreamText = '';
+      break;
+
+    case 'thinking_text':
+      hideWelcome();
+      if (!currentThinkingEl) {
+        currentThinkingEl = addThinking();
+        currentThinkingText = '';
+      }
+      if (!thinkingTrace) {
+        thinkingTrace = addTrace('think', '模型思考', '分析任务并规划下一步…');
+        setStage('think');
+      }
+      currentThinkingText += msg.data.text;
+      currentThinkingEl.querySelector('.thinking-body').textContent = currentThinkingText;
+      if (currentThinkingText.length < 500) updateTrace(thinkingTrace, 'running', clip(currentThinkingText, 180));
+      break;
+
+    case 'tool_use':
+      hideWelcome();
+      if (thinkingTrace) {
+        updateTrace(thinkingTrace, 'done', currentThinkingText.trim() ? clip(currentThinkingText, 180) : '内部推理完成，进入工具执行');
+        thinkingTrace = null;
+      }
+      setStage('tool');
+      addToolUse(msg.data);
+      activeTools += 1;
+      break;
+
+    case 'tool_result': {
+      setStage('observe');
+      if (activeTools > 0) activeTools -= 1;
+      updateToolResult(msg.data);
+      const key = msg.data.toolName + '_' + (msg.data.toolId || '');
+      const trace = toolTraces[key];
+      if (trace) {
+        if (msg.data.elapsed != null) trace._start = Date.now() - Number(msg.data.elapsed) * 1000;
+        updateTrace(trace, msg.data.isError ? 'error' : 'done', msg.data.isError ? '调用失败' : (msg.data.output || '工具执行完成'));
+        delete toolTraces[key];
+      }
+      break;
+    }
+
+    case 'permission_request':
+      hideWelcome();
+      setStage('tool');
+      addPermissionDialog(msg.data);
+      msg.data._traceEl = addTrace('permission', '等待权限确认', msg.data.toolName + ' · ' + (msg.data.description || ''));
+      break;
+
+    case 'ask_user':
+      hideWelcome();
+      addAskUserDialog(msg.data);
+      addTrace('permission', '等待用户选择', 'Agent 需要补充信息才能继续');
+      break;
+
+    case 'turn_complete':
+      break;
+
+    case 'loop_complete':
+      hideWelcome();
+      finishStages();
+      if (thinkingTrace) {
+        updateTrace(thinkingTrace, 'done', currentThinkingText.trim() ? clip(currentThinkingText, 180) : '内部推理完成');
+        thinkingTrace = null;
+      }
+      if (answerTrace) { updateTrace(answerTrace, 'done'); answerTrace = null; }
+      addTrace('done', '本轮完成', 'Agent Loop 正常结束，结果已写回会话', 'done');
+      stopRun('done', msg.data.elapsed);
+      streaming = false;
+      updateUI();
+      {
+        const el = document.createElement('div');
+        el.className = 'done-indicator';
+        el.textContent = '✻ Done in ' + Number(msg.data.elapsed || 0).toFixed(1) + 's';
+        messagesEl.appendChild(el);
+        scrollToBottom();
+      }
+      break;
+
+    case 'usage':
+      updateTokenInfo(msg.data.inputTokens, msg.data.outputTokens);
+      break;
+
+    case 'error':
+      hideWelcome();
+      addError(msg.data.message);
+      addTrace('error', '执行失败', msg.data.message);
+      stopRun('error');
+      streaming = false;
+      updateUI();
+      break;
+
+    case 'compact':
+      addTrace('info', '上下文压缩', msg.data.message, 'done');
+      addSystem('⟳ ' + msg.data.message);
+      break;
+
+    case 'retry':
+      addTrace('info', '自动重试', msg.data.reason, 'done');
+      addSystem('↻ ' + msg.data.reason);
+      break;
+  }
+}
+
+// ── message rendering ──
+function addUser(text) {
+  hideWelcome();
+  const div = document.createElement('div');
+  div.className = 'msg msg-user';
+  div.innerHTML =
+    '<div class="avatar user">YOU</div>' +
+    '<div class="bubble">' +
+      '<div class="msg-meta">YOU · ' + nowLabel() + '</div>' +
+      '<div class="content">' + escapeHtml(text) + '</div>' +
+    '</div>';
+  messagesEl.appendChild(div);
+  scrollToBottom();
+}
+
+function addAssistant() {
+  const div = document.createElement('div');
+  div.className = 'msg msg-assistant';
+  div.innerHTML =
+    '<div class="avatar assistant">M</div>' +
+    '<div class="bubble">' +
+      '<div class="msg-meta">PINECODE · AGENT</div>' +
+      '<div class="content"></div>' +
+    '</div>';
+  messagesEl.appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function updateAssistant(el, text, isStreaming) {
+  const contentEl = el.querySelector('.content');
+  const thinkMatch = text.match(/^<think>([\s\S]*?)<\/think>\s*([\s\S]*)$/);
+  if (thinkMatch) {
+    const thinkText = thinkMatch[1].trim();
+    const bodyText = thinkMatch[2].trim();
+    let html = '';
+    if (thinkText) {
+      html += '<div class="thinking-block">' +
+        '<div class="thinking-header" onclick="toggleThinking(this)">' +
+          '<span class="icon">▶</span><span>💭 Thought</span>' +
+        '</div>' +
+        '<div class="thinking-body">' + escapeHtml(thinkText) + '</div>' +
+      '</div>';
+    }
+    if (bodyText) html += renderMarkdown(bodyText);
+    if (isStreaming) html += '<span class="cursor">▎</span>';
+    contentEl.innerHTML = html;
+  } else if (text.startsWith('<think>') && isStreaming) {
+    const thinkBody = text.replace(/^<think>\s*/, '');
+    contentEl.innerHTML =
+      '<div class="thinking-block">' +
+        '<div class="thinking-header" onclick="toggleThinking(this)">' +
+          '<span class="icon">▶</span><span>💭 Thinking...</span>' +
+        '</div>' +
+        '<div class="thinking-body">' + escapeHtml(thinkBody) + '</div>' +
+      '</div><span class="cursor">▎</span>';
+  } else {
+    let html = renderMarkdown(text);
+    if (isStreaming) html += '<span class="cursor">▎</span>';
+    contentEl.innerHTML = html;
+  }
+  scrollToBottom();
+}
+
+function addThinking() {
+  const div = document.createElement('div');
+  div.className = 'thinking-block';
+  div.innerHTML =
+    '<div class="thinking-header" onclick="toggleThinking(this)">' +
+      '<span class="icon">▶</span><span>💭 Thinking...</span>' +
+    '</div>' +
+    '<div class="thinking-body"></div>';
+  messagesEl.appendChild(div);
+  scrollToBottom();
+  return div;
+}
+
+function toggleThinking(header) {
+  header.querySelector('.icon').classList.toggle('expanded');
+  header.nextElementSibling.classList.toggle('show');
+}
+
+function addSystem(text) {
+  const div = document.createElement('div');
+  div.className = 'msg msg-system';
+  div.innerHTML = '<span class="sys-icon">◈</span><span>' + escapeHtml(text) + '</span>';
+  messagesEl.appendChild(div);
+  scrollToBottom();
+}
+
+function addError(text) {
+  const div = document.createElement('div');
+  div.className = 'msg msg-error';
+  div.textContent = '✖ ' + text;
+  messagesEl.appendChild(div);
+  scrollToBottom();
+}
+
+// ── tool rendering ──
+function argsPreview(args) {
+  if (!args) return '';
+  if (args.command) return args.command;
+  if (args.file_path) return args.file_path;
+  if (args.pattern) return args.pattern;
+  if (args.path) return args.path;
+  if (args.query) return args.query;
+  const s = JSON.stringify(args);
+  return s && s !== '{}' ? s : '';
+}
+
+function addToolUse(data) {
+  const key = data.toolName + '_' + (data.toolId || '');
+  const existing = toolElements[key];
+  if (existing) {
+    const preview = argsPreview(data.args);
+    const previewEl = existing.querySelector('.tool-preview');
+    if (previewEl && preview) previewEl.textContent = preview;
+    const bodyArgs = existing.querySelector('.tool-args');
+    if (bodyArgs && data.args && Object.keys(data.args).length) {
+      bodyArgs.textContent = 'Args:\n' + JSON.stringify(data.args, null, 2);
+    }
+    if (toolTraces[key] && preview) updateTrace(toolTraces[key], 'running', preview);
+    return;
+  }
+
+  const div = document.createElement('div');
+  div.className = 'tool-block';
+  const argsStr = data.args && Object.keys(data.args).length ? JSON.stringify(data.args, null, 2) : '';
+  const preview = argsPreview(data.args);
+  const icon = toolIcons[data.toolName] || '⚙';
+
+  div.innerHTML =
+    '<div class="tool-header" onclick="toggleTool(this)">' +
+      '<span class="icon">▶</span>' +
+      '<span class="tool-icon">' + icon + '</span>' +
+      '<span class="name">' + escapeHtml(data.toolName) + '</span>' +
+      '<span class="tool-preview" style="color:var(--dim);font-size:9px;margin-left:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:430px;">' + escapeHtml(preview) + '</span>' +
+      '<span class="status loading">⏳ running</span>' +
+    '</div>' +
+    '<div class="tool-body">' +
+      '<div class="tool-args" style="color:var(--blue);margin-bottom:7px;">' + (argsStr ? escapeHtml('Args:\n' + argsStr) : '') + '</div>' +
+      '<div class="tool-output"></div>' +
+    '</div>';
+
+  messagesEl.appendChild(div);
+  toolElements[key] = div;
+
+  if (!toolTraces[key]) {
+    toolTraces[key] = addTrace('tool', '调用 ' + data.toolName, preview || '准备工具参数…');
+    toolCount += 1;
+    updateStats();
+  }
+  scrollToBottom();
+}
+
+function updateToolResult(data) {
+  const key = data.toolName + '_' + (data.toolId || '');
+  const div = toolElements[key];
+  if (div) {
+    const statusEl = div.querySelector('.status');
+    if (data.isError) {
+      statusEl.className = 'status err';
+      statusEl.textContent = '✗ ' + Number(data.elapsed || 0).toFixed(1) + 's';
+    } else {
+      statusEl.className = 'status ok';
+      statusEl.textContent = '✓ ' + Number(data.elapsed || 0).toFixed(1) + 's';
+    }
+    const outputEl = div.querySelector('.tool-output');
+    if (data.output) {
+      const raw = data.output.length > 5000 ? data.output.substring(0, 5000) + '\n... (truncated)' : data.output;
+      outputEl.textContent = clean(raw);
+    }
+    delete toolElements[key];
+  } else {
+    const block = document.createElement('div');
+    block.className = 'tool-block';
+    const status = data.isError ? '✗' : '✓';
+    const statusClass = data.isError ? 'err' : 'ok';
+    block.innerHTML =
+      '<div class="tool-header" onclick="toggleTool(this)">' +
+        '<span class="icon">▶</span>' +
+        '<span class="tool-icon">' + (toolIcons[data.toolName] || '⚙') + '</span>' +
+        '<span class="name">' + escapeHtml(data.toolName) + '</span>' +
+        '<span class="status ' + statusClass + '">' + status + ' ' + Number(data.elapsed || 0).toFixed(1) + 's</span>' +
+      '</div>' +
+      '<div class="tool-body">' + escapeHtml(clean(data.output || '')) + '</div>';
+    messagesEl.appendChild(block);
+  }
+  scrollToBottom();
+}
+
+function toggleTool(header) {
+  header.querySelector('.icon').classList.toggle('expanded');
+  header.nextElementSibling.classList.toggle('show');
+}
+
+// ── permission / ask dialogs ──
+function addPermissionDialog(data) {
+  const div = document.createElement('div');
+  div.className = 'perm-dialog';
+  div.id = 'perm-' + data.id;
+  div.innerHTML =
+    '<div class="title">🔒 Permission Required: ' + escapeHtml(data.toolName) + '</div>' +
+    '<div class="desc">' + escapeHtml(data.description) + '</div>' +
+    '<div class="actions">' +
+      '<button class="btn-allow" onclick="respondPerm(\'' + data.id + '\', \'allow\')">Allow</button>' +
+      '<button class="btn-always" onclick="respondPerm(\'' + data.id + '\', \'allowAlways\')">Allow Always</button>' +
+      '<button class="btn-deny" onclick="respondPerm(\'' + data.id + '\', \'deny\')">Deny</button>' +
+    '</div>';
+  messagesEl.appendChild(div);
+  scrollToBottom();
+}
+
+function respondPerm(id, response) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'permission_response', data: { id, response } }));
+  }
+  const el = document.getElementById('perm-' + id);
+  if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:10px;">🔒 Permission: ' + escapeHtml(response) + '</div>';
+}
+
+function addAskUserDialog(data) {
+  const div = document.createElement('div');
+  div.className = 'perm-dialog';
+  div.id = 'ask-' + data.id;
+  let html = '<div class="title">❓ Question</div>';
+  const questions = data.questions || [];
+  questions.forEach((q, qi) => {
+    html += '<div style="margin-bottom:10px;">';
+    html += '<div style="margin-bottom:5px;color:var(--text-bright);font-size:11px;">' + escapeHtml(q.question || q.Text || '') + '</div>';
+    const options = q.options || q.Options || [];
+    options.forEach((opt) => {
+      const label = opt.label || opt.Label || '';
+      const desc = opt.description || opt.Description || '';
+      html += '<label style="display:block;margin:3px 0;cursor:pointer;font-size:10px;">' +
+        '<input type="radio" name="ask_' + data.id + '_' + qi + '" value="' + escapeHtml(label) + '"> ' +
+        '<span style="color:var(--blue)">' + escapeHtml(label) + '</span>' +
+        (desc ? ' <span style="color:var(--text-dim);font-size:9px;">— ' + escapeHtml(desc) + '</span>' : '') +
+        '</label>';
+    });
+    html += '<label style="display:block;margin:3px 0;cursor:pointer;font-size:10px;">' +
+      '<input type="radio" name="ask_' + data.id + '_' + qi + '" value="__other__"> ' +
+      '<span style="color:var(--text-dim)">Other: </span>' +
+      '<input type="text" id="ask_other_' + data.id + '_' + qi + '" style="background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-family:inherit;font-size:10px;width:240px;">' +
+      '</label>';
+    html += '</div>';
+  });
+  html += '<div class="actions"><button class="btn-allow" onclick="respondAsk(\'' + data.id + '\',' + questions.length + ')">Submit</button></div>';
+  div.innerHTML = html;
+  messagesEl.appendChild(div);
+  scrollToBottom();
+}
+
+function respondAsk(id, qCount) {
+  const answers = {};
+  for (let i = 0; i < qCount; i++) {
+    const radios = document.querySelectorAll('input[name="ask_' + id + '_' + i + '"]');
+    let val = '';
+    radios.forEach((r) => {
+      if (r.checked) {
+        if (r.value === '__other__') {
+          const other = document.getElementById('ask_other_' + id + '_' + i);
+          val = other ? other.value : '';
+        } else {
+          val = r.value;
+        }
+      }
+    });
+    answers['question_' + i] = val;
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'ask_user_response', data: { id, answers } }));
+  }
+  const el = document.getElementById('ask-' + id);
+  if (el) el.innerHTML = '<div style="color:var(--text-dim);font-size:10px;">✓ Answered</div>';
+}
+
+// ── scroll / input ──
+messagesEl.addEventListener('scroll', () => {
+  const { scrollTop, scrollHeight, clientHeight } = messagesEl;
+  autoScroll = scrollHeight - scrollTop - clientHeight < 60;
+});
+
+function scrollToBottom() {
+  if (autoScroll) {
+    requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+  }
+}
+
+function sendMessage() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    addError('WebSocket 尚未连接，请等待右上角显示 Connected 后再发送。');
+    return;
+  }
+  if (slashMenu.classList.contains('show')) hideSlashMenu();
+  const text = inputEl.value.trim();
+  if (!text || streaming) return;
+  streaming = true;
+  startRun(text);
+  hideWelcome();
+  addUser(text);
+  ws.send(JSON.stringify({ type: 'user_message', data: { content: text } }));
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  updateUI();
+}
+
+function updateUI() {
+  sendBtn.disabled = streaming;
+  inputEl.disabled = streaming;
+  sendBtn.innerHTML = streaming ? 'Running <span>…</span>' : 'Send <span>↵</span>';
+  if (!streaming) inputEl.focus();
+}
+
+function usePrompt(text) {
+  inputEl.value = text;
+  inputEl.dispatchEvent(new Event('input'));
+  inputEl.focus();
+}
+
+// ── slash menu ──
+function showSlashMenu(filter) {
+  const prefix = filter.toLowerCase();
+  slashFiltered = allCommands.filter((c) => c.name.startsWith(prefix));
+  if (slashFiltered.length === 0) { hideSlashMenu(); return; }
+  slashCursor = 0;
+  renderSlashMenu();
+  slashMenu.classList.add('show');
+}
+
+function hideSlashMenu() {
+  slashMenu.classList.remove('show');
+  slashFiltered = [];
+  slashCursor = 0;
+}
+
+function renderSlashMenu() {
+  slashMenu.innerHTML = slashFiltered.map((c, i) =>
+    '<div class="slash-item' + (i === slashCursor ? ' active' : '') + '" data-idx="' + i + '">' +
+      '<span class="cmd-name">/' + escapeHtml(c.name) + '</span>' +
+      '<span class="cmd-desc">' + escapeHtml(c.description) + '</span>' +
+    '</div>'
+  ).join('');
+  slashMenu.querySelectorAll('.slash-item').forEach((el) => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectSlashItem(parseInt(el.dataset.idx, 10));
+    });
+  });
+  const activeEl = slashMenu.querySelector('.active');
+  if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+function selectSlashItem(idx) {
+  const cmd = slashFiltered[idx];
+  if (!cmd) return;
+  inputEl.value = '/' + cmd.name + ' ';
+  hideSlashMenu();
+  inputEl.focus();
+}
+
+inputEl.addEventListener('keydown', (e) => {
+  if (slashMenu.classList.contains('show')) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      slashCursor = Math.min(slashCursor + 1, slashFiltered.length - 1);
+      renderSlashMenu();
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      slashCursor = Math.max(slashCursor - 1, 0);
+      renderSlashMenu();
+      return;
+    }
+    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+      e.preventDefault();
+      selectSlashItem(slashCursor);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hideSlashMenu();
+      return;
+    }
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+  const val = inputEl.value;
+  if (val.startsWith('/') && !val.includes('\n')) {
+    const prefix = val.substring(1).split(' ')[0];
+    if (!val.includes(' ')) showSlashMenu(prefix);
+    else hideSlashMenu();
+  } else {
+    hideSlashMenu();
+  }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+
+connect();
+inputEl.focus();
+</script>
+</body>
+</html>

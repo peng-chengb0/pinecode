@@ -1,0 +1,32 @@
+build/
+.gradle/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+out/
+.mewcode/
+CLAUDE.md
+
+# Local secrets / runtime state
+.env
+*.key
+*.pem
+*.log
+
+# Local demo and academic scratch files
+mewcode_ui_*.png
+*.docx
+~$*
+generate_report.py
+make_architecture.py
+.chrome-*/
+.dsh-office-*/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local academic deliverables
+开题报告_*.md
+
