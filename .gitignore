@@ -21,6 +21,11 @@ mewcode_ui_*.png
 ~$*
 generate_report.py
 make_architecture.py
+PineCode_*.md
+generate_pinecode_report.py
+make_pinecode_architecture.py
+make_report_ui.py
+assets/report-ui.png
 .chrome-*/
 .dsh-office-*/
 
